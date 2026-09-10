@@ -1,0 +1,7 @@
+.git
+.env
+*.test
+*.scaffold
+context/
+.ai/
+.opencode/

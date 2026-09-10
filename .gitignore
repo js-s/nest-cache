@@ -31,3 +31,15 @@ out/
 # ──── OS ────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# Lokalne sekrety
+.env
+.env.*
+!.env.example
+# Lokalne artefakty
+*.scaffold
+/nest-cash
+
+#skills
+.ai/
+.opencode/
