@@ -4,6 +4,11 @@
 **Region:** `fra` (Frankfurt)
 **Szacowany koszt:** ~$0–2/mo (app autostop) + $0 (Neon free tier)
 
+**Stan na 2026-09-10:** Minimalny scaffold Go, Docker/Fly, Neon connection check
+i CI/CD zostały wdrożone i zweryfikowane. Funkcje produktowe NestCash (auth,
+transakcje i podsumowania) nie są jeszcze zaimplementowane. Billing alert oraz
+bezpośrednia weryfikacja przez `psql` pozostają do wykonania ręcznie.
+
 ---
 
 ## Faza 0: Wymagania wstępne
@@ -17,16 +22,21 @@ curl -L https://fly.io/install.sh | sh
 flyctl version
 ```
 
+- [x] `flyctl` zainstalowany i zweryfikowany (`v0.4.101`)
+
 ### Krok 0.2: Konta i uwierzytelnianie
-- [x] Konto Fly.io z dodaną kartą kredytową (wymagane, nawet na free usage)
+- [ ] Konto Fly.io z dodaną kartą kredytową (Fly zgłosił brak metody płatności podczas
+  tworzenia aplikacji; przez to wyłączył high availability)
 - [x] Konto Neon.tech (free tier, bez karty)
 - [x] Uwierzytelnianie flyctl: `flyctl auth login`
 
 ### Krok 0.3: Neon — utworzenie bazy danych
 - [x] Utworzenie projektu Neon: region `eu-central-1` (Frankfurt, blisko Fly `fra`)
 - [x] Skopiowanie connection stringa (pooled URL z PgBouncer) - wartość zapisana wyłącznie jako sekret Fly `DATABASE_URL`; nie przechowujemy jej w repozytorium
-- [ ] Zanotowanie: host, port, user, password, database name
-Otrzymałem tylko connection string - ponoć to wystarczy. Nie mam więcej danych.
+- [x] Zanotowanie danych połączenia — wszystkie są zawarte w connection stringu;
+  nie rozbijano go na osobne notatki, aby nie duplikować sekretu
+> Otrzymałem tylko connection string - to wystarczy do konfiguracji aplikacji.
+> Jego wartość nie jest przechowywana w repozytorium.
 
 
 #### Prompt od Neon tech: set up Neon with your coding agent
@@ -49,11 +59,16 @@ export default defineConfig({
 
 7. `neon deploy`
 
+> Nie wykonywano kroków `neon.ts`/`neon deploy`: dotyczą konfiguracji TypeScript,
+> a ten backend używa Go i sekretu `DATABASE_URL` ustawionego w Fly.
+
 
 **Weryfikacja Fazy 0:**
-- [ ] `flyctl auth whoami` zwraca email
-- [ ] Neon dashboard pokazuje aktywny projekt w eu-central-1
-- [ ] Connection string działa: `psql "<NEON_POOLED_URL>"` łączy się
+- [x] `flyctl auth whoami` zwraca email
+- [x] Neon dashboard pokazuje aktywny projekt w eu-central-1
+- [ ] Connection string działa przez `psql "<NEON_POOLED_URL>"` — `psql` nie jest
+  zainstalowany lokalnie; połączenie zostało potwierdzone przez `/healthz`
+  działające na Fly
 
 ---
 
@@ -110,9 +125,12 @@ context/
 ```
 
 **Weryfikacja Fazy 1:**
-- [ ] `docker build -t nest-cash .` buduje obraz bez błędów
-- [ ] `docker run -p 8080:8080 nest-cash` startuje lokalnie (bez DB — oczekiwany błąd połączenia)
-- [ ] `fly.toml` jest w repozytorium (wymagane dla CI/CD)
+- [x] `docker build -t nest-cash .` buduje obraz bez błędów
+- [x] `docker run -p 8080:8080 nest-cash` startuje lokalnie (bez DB — `/healthz`
+  zwraca oczekiwane `503` z `database: not_configured`)
+- [x] `fly.toml` jest w repozytorium (wymagane dla CI/CD)
+> Lokalny build i zdalny build Fly zakończyły się sukcesem. Dockerfile zawiera
+> konfigurowalny `GOPROXY`, ponieważ lokalny `proxy.golang.org` zwracał `EOF`.
 
 ---
 
@@ -124,17 +142,22 @@ flyctl launch --name nest-cash --region fra --no-deploy
 ```
 > **UWAGA:** Odrzucić propozycję utworzenia Fly Postgres / MPG! Wybierz "no database".
 > Znany bug #4871: przypadkowe tworzenie klastrów MPG = $38+/mo.
+> [x] Wykonano z `--no-db`, `--no-redis` i `--no-object-storage`; nie utworzono
+> dodatkowych usług Fly.
 
 ### Krok 2.2: Ustawienie secrets
 ```bash
 flyctl secrets set DATABASE_URL="<NEON_POOLED_CONNECTION_STRING>"
 flyctl secrets set SESSION_SECRET="<wygenerowany-losowy-string-64-znaki>"
 ```
+> [x] `DATABASE_URL` i losowy `SESSION_SECRET` zapisano w Fly Secrets. Ich
+> wartości nie znajdują się w repozytorium.
 
 ### Krok 2.3: Deploy
 ```bash
 flyctl deploy
 ```
+> [x] Pierwszy deploy zakończony sukcesem (release `v1`).
 
 ### Krok 2.4: Weryfikacja
 ```bash
@@ -144,11 +167,14 @@ flyctl open                      # otwiera w przeglądarce
 ```
 
 **Weryfikacja Fazy 2:**
-- [ ] `flyctl status` pokazuje maszynę w stanie `started`
-- [ ] `flyctl logs` nie zawiera błędów połączenia z bazą
-- [ ] `curl https://nest-cash.fly.dev/healthz` zwraca 200
-- [ ] Rejestracja i logowanie działają end-to-end
+- [x] `flyctl status` pokazał jedną maszynę w stanie `started` po deployu;
+  późniejszy stan `stopped` jest oczekiwany przy autostop
+- [x] `flyctl logs` nie zawiera błędów połączenia z bazą
+- [x] `curl https://nest-cash.fly.dev/healthz` zwraca 200 oraz `database: ok`
+- [ ] Rejestracja i logowanie działają end-to-end — funkcje auth nie są jeszcze
+  zaimplementowane w minimalnym scaffoldzie
 - [ ] Dashboard Fly.io: billing pokazuje $0.00 (lub grosze)
+> URL aplikacji: https://nest-cash.fly.dev/
 
 ---
 
@@ -156,14 +182,17 @@ flyctl open                      # otwiera w przeglądarce
 
 ### Krok 3.1: Deploy token
 ```bash
-flyctl tokens create deploy -x 999999h
+flyctl tokens create deploy --app nest-cash --expiry 8760h --name nest-cash-github-actions
 # Skopiować CAŁY output, włącznie z "FlyV1 " na początku
 ```
+> [x] Utworzono app-scoped deploy token. Wartość tokena nie jest przechowywana
+> w repozytorium ani w planie.
 
 ### Krok 3.2: GitHub secret
 - Settings → Secrets and variables → Actions → New repository secret
 - Name: `FLY_API_TOKEN`
 - Value: skopiowany token z kroku 3.1
+> [x] Sekret `FLY_API_TOKEN` dodano w repozytorium `js-s/nest-cache`.
 
 ### Krok 3.3: Workflow `.github/workflows/fly.yml`
 ```yaml
@@ -184,12 +213,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 ```
+> [x] Workflow zapisano w `.github/workflows/fly.yml` i wypchnięto na `main`.
 
 **Weryfikacja Fazy 3:**
-- [ ] Push do `main` triggeruje GitHub Action
-- [ ] Action kończy się statusem "success"
-- [ ] `flyctl releases` pokazuje nową wersję
-- [ ] Aplikacja działa po deploy z CI
+- [x] Push do `main` triggeruje GitHub Action
+- [x] Action kończy się statusem `success`
+- [x] `flyctl releases` pokazuje nową wersję (`v2`)
+- [x] Aplikacja działa po deploy z CI
+> Run: https://github.com/js-s/nest-cache/actions/runs/34473618229
 
 ---
 
@@ -197,8 +228,8 @@ jobs:
 
 ### Krok 4.1: Health check endpoint
 Aplikacja powinna eksponować `/healthz`:
-- Sprawdza połączenie z Neon (`SELECT 1`)
-- Zwraca 200 OK lub 503
+- [x] Sprawdza połączenie z Neon przez `PingContext` sterownika PostgreSQL
+- [x] Zwraca 200 OK lub 503
 
 ### Krok 4.2: Logowanie i alerty
 ```bash
@@ -208,15 +239,19 @@ flyctl logs
 # JSON format (do parsowania)
 flyctl logs --json
 ```
+> [x] `flyctl logs --json` zwraca poprawne logi platformy Fly. Per-request
+> structured logging po stronie aplikacji nie jest jeszcze zaimplementowany.
 
 ### Krok 4.3: Billing guard
 - [ ] Ustaw billing alert w Fly.io dashboard ($5/mo threshold)
 - [ ] Neon dashboard: monitoruj storage usage (limit 0.5GB free)
 - [ ] Comiesięczny review: `flyctl bills`
+> Te trzy punkty pozostają ręcznymi zadaniami operacyjnymi.
 
 **Weryfikacja Fazy 4:**
-- [ ] `/healthz` zwraca 200 z informacją o DB
-- [ ] `flyctl logs` pokazuje requesty w formacie JSON
+- [x] `/healthz` zwraca 200 z informacją o DB
+- [ ] `flyctl logs` pokazuje requesty w formacie JSON — dostępne są JSON logi
+  platformy, ale aplikacja nie emituje jeszcze logów każdego requestu
 - [ ] Billing alert skonfigurowany na $5
 
 ---
@@ -288,21 +323,21 @@ flyctl releases rollback         # cofnij do poprzedniej
 ## Checklisty podsumowujące
 
 ### Pre-deploy
-- [ ] flyctl zainstalowany i zautentykowany
-- [ ] Konto Fly.io z kartą kredytową
-- [ ] Projekt Neon utworzony w eu-central-1
-- [ ] Dockerfile i fly.toml w repozytorium
-- [ ] `docker build` przechodzi lokalnie
-- [ ] `.dockerignore` wyklucza niepotrzebne pliki
+- [x] flyctl zainstalowany i zautentykowany
+- [ ] Konto Fly.io z kartą kredytową — Fly zgłasza brak metody płatności
+- [x] Projekt Neon utworzony w eu-central-1
+- [x] Dockerfile i fly.toml w repozytorium
+- [x] `docker build` przechodzi lokalnie
+- [x] `.dockerignore` wyklucza niepotrzebne pliki
 
 ### Post-deploy
-- [ ] `flyctl status` = maszyna running
-- [ ] `curl /healthz` = 200
-- [ ] Rejestracja + logowanie = działa
-- [ ] CRUD transakcji = działa
-- [ ] Podsumowanie z filtrami = działa
+- [x] `flyctl status` = jedna maszyna; może być `stopped` przy bezczynności
+- [x] `curl /healthz` = 200
+- [ ] Rejestracja + logowanie = działa — poza zakresem minimalnego scaffolda
+- [ ] CRUD transakcji = działa — poza zakresem minimalnego scaffolda
+- [ ] Podsumowanie z filtrami = działa — poza zakresem minimalnego scaffolda
 - [ ] Billing < $5/mo
-- [ ] CI/CD deploy z `main` = automatyczny
+- [x] CI/CD deploy z `main` = automatyczny
 - [ ] Billing alert ustawiony
 
 ### Operacje ręczne (human-only)
