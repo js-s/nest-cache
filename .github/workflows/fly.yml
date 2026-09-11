@@ -1,18 +1,164 @@
 name: Fly Deploy
 
 on:
+  pull_request:
   push:
     branches:
       - main
 
 jobs:
+  web-build:
+    name: Build web client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Use public npm URLs in CI workspace
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = 'web/package-lock.json'
+          const privateRegistry = 'https://cdproxy.sportradar.online/npm/'
+          const publicRegistry = 'https://registry.npmjs.org/'
+          const lockfile = fs.readFileSync(path, 'utf8')
+          const normalized = lockfile.replaceAll(privateRegistry, publicRegistry)
+
+          if (!normalized.includes(publicRegistry)) {
+            throw new Error('The package lockfile did not contain the expected registry URLs')
+          }
+
+          fs.writeFileSync(path, normalized)
+          NODE
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+          NPM_CONFIG_AUDIT: 'false'
+          NPM_CONFIG_FUND: 'false'
+      - name: Build web client
+        working-directory: web
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: /api
+      - name: Verify public web artifact
+        working-directory: web
+        run: |
+          test -f dist/index.html
+          if rg --hidden --glob '!*.map' \
+            '(DATABASE_URL|SESSION_SECRET|FLY_API_TOKEN|NEON_|cdproxy\.sportradar\.online)' \
+            dist; then
+            echo 'Potential server secret or private registry reference found in web/dist'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          if-no-files-found: error
+
+  go-test:
+    name: Test Go API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.2
+          cache: true
+      - name: Run Go tests
+        run: go test ./...
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+
+  # Pull requests build and test only; review apps stay disabled until Neon isolation exists.
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - web-build
+      - go-test
     name: Deploy app
     runs-on: ubuntu-latest
     concurrency: deploy-group
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+      - name: Verify Fly deploy token is configured
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: test -n "$FLY_API_TOKEN"
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Verify deployed release
+        run: flyctl status --app nest-cash --json
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Smoke test production routes
+        env:
+          APP_URL: https://nest-cash.fly.dev
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          check_index=0
+
+          check_route() {
+            local route="$1"
+            local expected_status="$2"
+            local expected_type="$3"
+            local headers="$tmp_dir/headers-$check_index"
+            local body="$tmp_dir/body-$check_index"
+            local actual_status
+            local curl_options=(
+              --silent
+              --show-error
+              --location
+              --connect-timeout 10
+              --max-time 30
+              --retry 10
+              --retry-delay 3
+              --retry-all-errors
+            )
+
+            if [ "$expected_status" = "200" ]; then
+              curl_options+=(--fail)
+            fi
+
+            actual_status="$(curl "${curl_options[@]}" \
+              --dump-header "$headers" \
+              --output "$body" \
+              --write-out '%{http_code}' \
+              "$APP_URL$route")"
+
+            if [ "$actual_status" != "$expected_status" ]; then
+              echo "$route returned HTTP $actual_status, expected $expected_status"
+              cat "$body"
+              exit 1
+            fi
+
+            if ! grep -qi "^content-type: $expected_type" "$headers"; then
+              echo "$route did not return Content-Type starting with $expected_type"
+              cat "$headers"
+              exit 1
+            fi
+
+            if [[ "$route" == /api/* ]] && ! grep -q '"error":"not_found"' "$body"; then
+              echo "$route did not return the expected JSON error"
+              cat "$body"
+              exit 1
+            fi
+          }
+
+          check_route /healthz 200 application/json
+          check_route / 200 text/html
+          check_route /smoke/deep-link 200 text/html
+          check_route /api/__smoke_not_found__ 404 application/json

@@ -14,13 +14,19 @@ import (
 )
 
 type application struct {
-	db *sql.DB
+	db        *sql.DB
+	staticDir string
 }
 
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+	}
+
+	staticDir := os.Getenv("STATIC_DIR")
+	if staticDir == "" {
+		staticDir = "web/dist"
 	}
 
 	var db *sql.DB
@@ -36,27 +42,15 @@ func main() {
 		defer db.Close()
 	}
 
-	app := application{db: db}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", app.index)
-	mux.HandleFunc("GET /healthz", app.healthz)
-
 	server := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: (application{db: db, staticDir: staticDir}).routes(),
 	}
 
 	log.Printf("nest-cash listening on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
-}
-
-func (a application) index(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
-		"service": "nest-cash",
-		"status":  "running",
-	})
 }
 
 func (a application) healthz(w http.ResponseWriter, r *http.Request) {

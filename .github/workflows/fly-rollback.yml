@@ -1,0 +1,53 @@
+name: Fly Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Known-good registry.fly.io/nest-cash image reference
+        required: true
+        type: string
+      confirm:
+        description: Type ROLLBACK to confirm the production change
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Roll back production image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate explicit rollback request
+        env:
+          IMAGE_REF: ${{ inputs.image }}
+          ROLLBACK_CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          test "$ROLLBACK_CONFIRM" = "ROLLBACK"
+          case "$IMAGE_REF" in
+            registry.fly.io/nest-cash:*|registry.fly.io/nest-cash@sha256:*) ;;
+            *)
+              echo 'image must reference registry.fly.io/nest-cash'
+              exit 1
+              ;;
+          esac
+
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Show current release
+        run: flyctl status --app nest-cash --json
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy selected image
+        run: flyctl deploy --app nest-cash --image "$IMAGE_REF"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          IMAGE_REF: ${{ inputs.image }}
+
+      - name: Verify rollback health
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors https://nest-cash.fly.dev/healthz

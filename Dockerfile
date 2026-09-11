@@ -17,6 +17,10 @@ FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /nest-cash /usr/local/bin/nest-cash
+COPY web/dist /app/web/dist
+RUN test -f /app/web/dist/index.html
+
+ENV STATIC_DIR=/app/web/dist
 
 EXPOSE 8080
 CMD ["nest-cash"]
