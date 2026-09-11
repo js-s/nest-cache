@@ -206,8 +206,8 @@ Brak migracji i zmian danych. Dodanie `AccountID` do tabel oraz ewentualna polit
 
 #### Automated
 
-- [x] 1.1 `gofmt -d` reports no formatting differences for identity files
-- [x] 1.2 Account identity/context unit tests pass
+- [x] 1.1 `gofmt -d` reports no formatting differences for identity files — 7a2622a
+- [x] 1.2 Account identity/context unit tests pass — 7a2622a
 
 #### Manual
 
@@ -217,10 +217,10 @@ Brak migracji i zmian danych. Dodanie `AccountID` do tabel oraz ewentualna polit
 
 #### Automated
 
-- [ ] 2.1 `gofmt -d` reports no formatting differences for account package files
-- [ ] 2.2 Middleware contract tests pass for reject and allow paths
-- [ ] 2.3 `go test ./...` passes with dependencies available
-- [ ] 2.4 `go vet ./...` passes
+- [x] 2.1 `gofmt -d` reports no formatting differences for account package files
+- [x] 2.2 Middleware contract tests pass for reject and allow paths
+- [x] 2.3 `go test ./...` passes with dependencies available
+- [x] 2.4 `go vet ./...` passes
 
 #### Manual
 
