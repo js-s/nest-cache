@@ -17,6 +17,16 @@ func (s stubResolver) ResolveAccountID(*http.Request) (AccountID, bool) {
 	return s.id, s.ok
 }
 
+type pointerResolver struct{}
+
+func (*pointerResolver) ResolveAccountID(*http.Request) (AccountID, bool) {
+	return "acct-1", true
+}
+
+type nilHandler struct{}
+
+func (*nilHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
 func TestRequireAccountRejectsMissingResolver(t *testing.T) {
 	called := false
 	handler := RequireAccount(nil, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -29,6 +39,44 @@ func TestRequireAccountRejectsMissingResolver(t *testing.T) {
 	assertUnauthorized(t, response)
 	if called {
 		t.Fatal("downstream handler called, want not called")
+	}
+}
+
+func TestRequireAccountRejectsTypedNilResolver(t *testing.T) {
+	var resolver *pointerResolver
+	called := false
+	handler := RequireAccount(resolver, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assertUnauthorized(t, response)
+	if called {
+		t.Fatal("downstream handler called, want not called")
+	}
+}
+
+func TestRequireAccountRejectsNilDownstream(t *testing.T) {
+	var typedNil *nilHandler
+	tests := []struct {
+		name string
+		next http.Handler
+	}{
+		{name: "nil", next: nil},
+		{name: "typed nil", next: typedNil},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler := RequireAccount(stubResolver{id: "acct-1", ok: true}, test.next)
+
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
+
+			assertServerError(t, response)
+		})
 	}
 }
 
@@ -80,8 +128,33 @@ func TestRequireAccountAllowsResolved(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
 	}
+	if got := response.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want %q", got, "no-store")
+	}
 	if got != "acct-42" {
 		t.Fatalf("context AccountID = %q, want %q", got, "acct-42")
+	}
+}
+
+func assertServerError(t *testing.T, response *httptest.ResponseRecorder) {
+	t.Helper()
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusInternalServerError)
+	}
+	if got := response.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want %q", got, "no-store")
+	}
+	if got := response.Header().Get("Content-Type"); got != "application/json" {
+		t.Errorf("Content-Type = %q, want %q", got, "application/json")
+	}
+
+	var body map[string]string
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode error body: %v", err)
+	}
+	if body["error"] != "internal_server_error" {
+		t.Errorf("error = %q, want %q", body["error"], "internal_server_error")
 	}
 }
 

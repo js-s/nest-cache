@@ -137,11 +137,12 @@ Dodać middleware, który zasila context wynikiem zaufanego resolvera i fail-clo
 
 #### 3. Preserve public server routes
 
-**File**: `cmd/nest-cash/main.go` (weryfikacja bez zmiany tras)
+**File**: `cmd/nest-cash/main.go`, `cmd/nest-cash/spa.go`
+(weryfikacja publicznej granicy tras)
 
-**Intent**: Zachować istniejący publiczny kontrakt smoke deployu; F-01 dostarcza gotowy middleware dla przyszłych tras, ale nie opakowuje `/` ani `/healthz`.
+**Intent**: Zachować publiczny kontrakt smoke deployu; F-01 dostarcza gotowy middleware dla przyszłych tras, ale nie opakowuje `/` ani `/healthz`.
 
-**Contract**: Rejestracja `GET /` i `GET /healthz` pozostaje publiczna i funkcjonalnie niezmieniona. Nie dodawać endpointu probe wyłącznie na potrzeby F-01.
+**Contract**: `GET /` i `GET /healthz` pozostają publiczne. `/healthz` zachowuje dotychczasową odpowiedź, natomiast `/` może serwować publiczny shell SPA po integracji GUI. Nie dodawać endpointu probe wyłącznie na potrzeby F-01.
 
 ### Success Criteria:
 
@@ -159,6 +160,10 @@ Dodać middleware, który zasila context wynikiem zaufanego resolvera i fail-clo
 - Przegląd implementacji potwierdza, że przyszły resolver sesji może zasilić ten sam kontrakt bez zmiany handlerów korzystających z contextu.
 
 **Implementation Note**: Po zakończeniu fazy i przejściu automatycznej weryfikacji zatrzymaj się na ręczne potwierdzenie publicznego `/healthz` oraz zakresu zmian przed wdrożeniem kolejnego slice’a.
+
+## Post-implementation integration note
+
+Po implementacji F-01 rozszerzenie aplikacji o GUI zaktualizowało baseline repozytorium. Publiczny `GET /healthz` zachowuje dotychczasowy kontrakt, a publiczny `GET /` jest obecnie obsługiwany przez `cmd/nest-cash/spa.go` jako shell SPA. Ta zmiana nie rozszerza granicy F-01: resolver sesji, auth oraz chronione trasy domenowe nadal należą do S-01.
 
 ## Testing Strategy
 
@@ -194,7 +199,7 @@ Brak migracji i zmian danych. Dodanie `AccountID` do tabel oraz ewentualna polit
 - `context/foundation/roadmap.md:52-63` — definicja F-01, zakres i ryzyko rozrostu do pełnego auth.
 - `context/foundation/prd.md:35-38,80-85,103-112` — prywatność, retencja i single-user access control.
 - `context/foundation/tech-stack.md:2-23` — Go 1.22.2, standard library preferred, auth assembled later.
-- `cmd/nest-cash/main.go:16-47,62-94` — aktualny serwer, publiczne trasy i JSON response helper.
+- `cmd/nest-cash/main.go:16-50,53-94` oraz `cmd/nest-cash/spa.go:11-29,40-75` — aktualny serwer, publiczne trasy i JSON response helper.
 - `cmd/nest-cash/main_test.go:8-19` — istniejący wzorzec testów `httptest`.
 - `context/deployment/deploy-plan.md:148-175` — skonfigurowany `SESSION_SECRET` i publiczny health check, bez zaimplementowanego auth.
 
