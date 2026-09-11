@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -52,7 +53,7 @@ func (s *Store) CreateUser(ctx context.Context, email, passwordHash string) (use
 		return User{}, false, nil
 	}
 	if err != nil {
-		return User{}, false, err
+		return User{}, false, fmt.Errorf("auth: create user: %w", err)
 	}
 	return user, true, nil
 }
@@ -67,12 +68,13 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (user User, o
 		return User{}, false, nil
 	}
 	if err != nil {
-		return User{}, false, err
+		return User{}, false, fmt.Errorf("auth: find user by email: %w", err)
 	}
 	return user, true, nil
 }
 
 // FindUserByID returns the user for id, ok=false when absent.
+// A malformed id returns err (not ok=false); callers map it to 500, not 404.
 func (s *Store) FindUserByID(ctx context.Context, id string) (user User, ok bool, err error) {
 	err = s.db.QueryRowContext(ctx,
 		`SELECT id, email, password_hash, created_at FROM users WHERE id = $1`,
@@ -82,18 +84,24 @@ func (s *Store) FindUserByID(ctx context.Context, id string) (user User, ok bool
 		return User{}, false, nil
 	}
 	if err != nil {
-		return User{}, false, err
+		return User{}, false, fmt.Errorf("auth: find user by id: %w", err)
 	}
 	return user, true, nil
 }
 
 // CreateSession stores a token hash for userID until expiresAt.
 func (s *Store) CreateSession(ctx context.Context, tokenHash, userID string, expiresAt time.Time) error {
+	if tokenHash == "" || userID == "" {
+		return fmt.Errorf("auth: create session: empty token hash or user id")
+	}
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)`,
 		tokenHash, userID, expiresAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("auth: create session: %w", err)
+	}
+	return nil
 }
 
 // FindSessionUser resolves a live session to its owner.
@@ -111,31 +119,41 @@ func (s *Store) FindSessionUser(ctx context.Context, tokenHash string) (user Use
 		return User{}, Session{}, false, nil
 	}
 	if err != nil {
-		return User{}, Session{}, false, err
+		return User{}, Session{}, false, fmt.Errorf("auth: find session user: %w", err)
 	}
 	return user, session, true, nil
 }
 
 // TouchSession extends a live session's expiry (sliding session).
+// Unknown or expired hashes are a silent no-op returning nil.
 func (s *Store) TouchSession(ctx context.Context, tokenHash string, expiresAt time.Time) error {
+	if tokenHash == "" {
+		return fmt.Errorf("auth: touch session: empty token hash")
+	}
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE sessions SET expires_at = $2 WHERE token_hash = $1 AND expires_at > now()`,
 		tokenHash, expiresAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("auth: touch session: %w", err)
+	}
+	return nil
 }
 
 // DeleteSession revokes one session; unknown hashes are a no-op.
 func (s *Store) DeleteSession(ctx context.Context, tokenHash string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = $1`, tokenHash)
-	return err
+	if err != nil {
+		return fmt.Errorf("auth: delete session: %w", err)
+	}
+	return nil
 }
 
 // DeleteExpiredSessions removes dead rows; returns the purged count.
 func (s *Store) DeleteExpiredSessions(ctx context.Context) (int64, error) {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE expires_at <= now()`)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("auth: delete expired sessions: %w", err)
 	}
 	return res.RowsAffected()
 }

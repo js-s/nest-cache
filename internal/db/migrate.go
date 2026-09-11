@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 //go:embed migrations/*.sql
@@ -26,7 +27,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
 			names = append(names, e.Name())
 		}
 	}
@@ -54,7 +55,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 			_ = tx.Rollback()
 			return fmt.Errorf("migrate: apply %s: %w", name, err)
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (filename) VALUES ($1)`, name); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING`, name); err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("migrate: record %s: %w", name, err)
 		}

@@ -233,15 +233,15 @@ bcrypt cost 12 ~250ms/login — off hot path, fine for personal scale. Session l
 
 #### Automated
 
-- [x] 1.1 `go test ./internal/auth -run 'TestStore'` passes against real PG
-- [x] 1.2 `gofmt -d` clean on new files
-- [x] 1.3 `go vet ./...` passes
+- [x] 1.1 `go test ./internal/auth -run 'TestStore'` passes against real PG — 1727edc
+- [x] 1.2 `gofmt -d` clean on new files — 1727edc
+- [x] 1.3 `go vet ./...` passes — 1727edc
 
 #### Manual
 
-- [x] 1.4 Fresh DB boot applies 0001 once; reboot idempotent
-- [x] 1.5 Two users visible, emails unique case-insensitively
-- [x] 1.6 Boot without `DATABASE_URL` still serves degraded `/healthz`
+- [x] 1.4 Fresh DB boot applies 0001 once; reboot idempotent — 1727edc
+- [x] 1.5 Two users visible, emails unique case-insensitively — 1727edc
+- [x] 1.6 Boot without `DATABASE_URL` still serves degraded `/healthz` — 1727edc
 
 ### Phase 2: Cookie session Resolver + auth endpoints
 
