@@ -64,7 +64,7 @@ Frontend nie dostaje osobnej foundation: jego scaffold i ścieżka wdrożeniowa 
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Fundament musi pozostać minimalną granicą własności danych; rozbudowanie go do kompletnego systemu uwierzytelniania przed pierwszym przepływem zwiększyłoby koszt i opóźniło cel szybkości.
-- **Status:** ready
+- **Status:** done
 
 ## Slices
 
@@ -81,7 +81,7 @@ Każdy poniższy slice jest planowany jako jeden pionowy przyrost: interfejs web
 - **Unknowns:**
   - Czy odzyskiwanie lub reset hasła jest obowiązkowe w MVP, a jeśli tak, jaki jest jego minimalny przepływ? — Owner: user. Block: yes.
 - **Risk:** Ekrany rejestracji i logowania muszą zostać domknięte razem z API sesji; nieuzgodniony zakres odzyskiwania hasła może zatrzymać pierwszy działający przepływ.
-- **Status:** blocked
+- **Status:** ready
 
 ### S-02: Kategorie startowe i własne
 
