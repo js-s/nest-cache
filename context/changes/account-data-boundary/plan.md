@@ -211,18 +211,18 @@ Brak migracji i zmian danych. Dodanie `AccountID` do tabel oraz ewentualna polit
 
 #### Manual
 
-- [ ] 1.3 Identity API is provider-neutral and contains no auth or default-account behavior
+- [x] 1.3 Identity API is provider-neutral and contains no auth or default-account behavior — 7a2622a
 
 ### Phase 2: HTTP enforcement and contract verification
 
 #### Automated
 
-- [x] 2.1 `gofmt -d` reports no formatting differences for account package files
-- [x] 2.2 Middleware contract tests pass for reject and allow paths
-- [x] 2.3 `go test ./...` passes with dependencies available
-- [x] 2.4 `go vet ./...` passes
+- [x] 2.1 `gofmt -d` reports no formatting differences for account package files — ca7eb1e
+- [x] 2.2 Middleware contract tests pass for reject and allow paths — ca7eb1e
+- [x] 2.3 `go test ./...` passes with dependencies available — ca7eb1e
+- [x] 2.4 `go vet ./...` passes — ca7eb1e
 
 #### Manual
 
-- [ ] 2.5 Public `/healthz` remains accessible without an account
-- [ ] 2.6 Diff contains no temporary identity source, production probe route, or auth implementation
+- [x] 2.5 Public `/healthz` remains accessible without an account — ca7eb1e
+- [x] 2.6 Diff contains no temporary identity source, production probe route, or auth implementation — ca7eb1e
