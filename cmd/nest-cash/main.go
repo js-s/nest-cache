@@ -11,6 +11,8 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	dbmigrate "github.com/user/nest-cash/internal/db"
 )
 
 type application struct {
@@ -40,6 +42,12 @@ func main() {
 		db.SetMaxIdleConns(5)
 		db.SetConnMaxIdleTime(5 * time.Minute)
 		defer db.Close()
+
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer migrateCancel()
+		if err := dbmigrate.Migrate(migrateCtx, db); err != nil {
+			log.Fatalf("apply migrations: %v", err)
+		}
 	}
 
 	server := &http.Server{
