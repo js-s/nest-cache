@@ -1,7 +1,7 @@
 ---
 change_id: income-and-budget-ratio
 title: Income and budget ratio
-status: implementing
+status: implemented
 created: 2026-09-12
 updated: 2026-09-12
 archived_at: null

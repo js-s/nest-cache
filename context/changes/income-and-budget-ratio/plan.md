@@ -203,12 +203,12 @@ Brak migracji — `kind` i indeks istnieją od `0004`. Rollback = revert handler
 
 #### Automated
 
-- [x] 2.1 Build frontu przechodzi
-- [x] 2.2 Backend nadal zielony
+- [x] 2.1 Build frontu przechodzi — c6b954e
+- [x] 2.2 Backend nadal zielony — c6b954e
 
 #### Manual
 
-- [x] 2.3 Toggle zapisuje przychód, lista z Rodzaj i filtrem kind
-- [x] 2.4 Badge zielony/żółty/czerwony na seedowanych okresach
-- [x] 2.5 Zero przychodów daje myślnik + hint; multi-select nie rusza ratio
-- [x] 2.6 Odpowiedź < 2s + izolacja drugiego usera
+- [x] 2.3 Toggle zapisuje przychód, lista z Rodzaj i filtrem kind — c6b954e
+- [x] 2.4 Badge zielony/żółty/czerwony na seedowanych okresach — c6b954e
+- [x] 2.5 Zero przychodów daje myślnik + hint; multi-select nie rusza ratio — c6b954e
+- [x] 2.6 Odpowiedź < 2s + izolacja drugiego usera — c6b954e
