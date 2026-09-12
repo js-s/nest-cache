@@ -253,18 +253,18 @@ bcrypt cost 12 ~250ms/login — off hot path, fine for personal scale. Session l
 
 #### Manual
 
-- [ ] 2.4 curl register→cookie; restart-safe; logout clears; expired 401
-- [ ] 2.5 Two-account isolation check passes
-- [ ] 2.6 Secure-cookie gate correct on localhost vs https
+- [x] 2.4 curl register→cookie; restart-safe; logout clears; expired 401 — f131314
+- [x] 2.5 Two-account isolation check passes — f131314
+- [x] 2.6 Secure-cookie gate correct on localhost vs https — f131314
 
 ### Phase 3: Web register/login + session guard
 
 #### Automated
 
-- [x] 3.1 `npm --prefix web run build` passes
+- [x] 3.1 `npm --prefix web run build` passes — 865b3a8
 
 #### Manual
 
-- [x] 3.2 Register→reload→logout→guard redirect works
-- [x] 3.3 Generic bad-credential error, no oracle
-- [x] 3.4 Dev proxy and built SPA serve both work
+- [x] 3.2 Register→reload→logout→guard redirect works — 865b3a8
+- [x] 3.3 Generic bad-credential error, no oracle — 865b3a8
+- [x] 3.4 Dev proxy and built SPA serve both work — 865b3a8
