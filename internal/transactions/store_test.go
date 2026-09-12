@@ -84,7 +84,7 @@ func TestCreateExpense(t *testing.T) {
 	parent := createCategory(t, ctx, db, userID, KindExpense, "Jedzenie")
 	sub := createSubcategory(t, ctx, db, userID, parent, "Zakupy")
 
-	tx, ok, err := s.Create(ctx, userID, sub, "12.34", "2026-02-03", "  obiad  ")
+	tx, ok, err := s.Create(ctx, userID, sub, KindExpense, "12.34", "2026-02-03", "  obiad  ")
 	if err != nil || !ok {
 		t.Fatalf("Create = %+v, %v, %v", tx, ok, err)
 	}
@@ -113,7 +113,7 @@ func TestCreatePreservesMoneyPrecision(t *testing.T) {
 	cat := createCategory(t, ctx, db, userID, KindExpense, "Precyzja")
 
 	for _, amount := range []string{"0.01", "0.10", "1000000.00", MaxAmount} {
-		tx, ok, err := s.Create(ctx, userID, cat, amount, "2026-02-03", "")
+		tx, ok, err := s.Create(ctx, userID, cat, KindExpense, amount, "2026-02-03", "")
 		if err != nil || !ok {
 			t.Fatalf("Create(%s) = %v, %v", amount, ok, err)
 		}
@@ -123,7 +123,7 @@ func TestCreatePreservesMoneyPrecision(t *testing.T) {
 	}
 
 	// A group-level category has no parent name.
-	tx, ok, err := s.Create(ctx, userID, cat, "5.00", "2026-02-03", "")
+	tx, ok, err := s.Create(ctx, userID, cat, KindExpense, "5.00", "2026-02-03", "")
 	if err != nil || !ok {
 		t.Fatalf("Create group-level = %v, %v", ok, err)
 	}
@@ -166,7 +166,7 @@ func TestCreateRejectsInvalidInput(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tx, ok, err := s.Create(ctx, tc.userID, tc.category, tc.amount, tc.date, "x"); err != nil || ok {
+			if tx, ok, err := s.Create(ctx, tc.userID, tc.category, KindExpense, tc.amount, tc.date, "x"); err != nil || ok {
 				t.Fatalf("expected ok=false, nil error; got %+v, %v, %v", tx, ok, err)
 			}
 		})
@@ -183,15 +183,15 @@ func TestListPaginationAndIsolation(t *testing.T) {
 	bCat := createCategory(t, ctx, db, b, KindExpense, "B")
 
 	for _, d := range []string{"2026-01-01", "2026-01-02", "2026-01-03"} {
-		if _, ok, err := s.Create(ctx, a, aCat, "1.00", d, ""); err != nil || !ok {
+		if _, ok, err := s.Create(ctx, a, aCat, KindExpense, "1.00", d, ""); err != nil || !ok {
 			t.Fatalf("seed A %s: %v %v", d, ok, err)
 		}
 	}
-	if _, ok, err := s.Create(ctx, b, bCat, "9.99", "2026-01-05", ""); err != nil || !ok {
+	if _, ok, err := s.Create(ctx, b, bCat, KindExpense, "9.99", "2026-01-05", ""); err != nil || !ok {
 		t.Fatalf("seed B: %v %v", ok, err)
 	}
 
-	page1, total, err := s.List(ctx, a, 1, 2)
+	page1, total, err := s.List(ctx, a, 1, 2, "all")
 	if err != nil {
 		t.Fatalf("List A page1: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestListPaginationAndIsolation(t *testing.T) {
 		t.Fatalf("first item = %s, want newest 2026-01-03", got)
 	}
 
-	page2, total, err := s.List(ctx, a, 2, 2)
+	page2, total, err := s.List(ctx, a, 2, 2, "all")
 	if err != nil {
 		t.Fatalf("List A page2: %v", err)
 	}
@@ -214,12 +214,91 @@ func TestListPaginationAndIsolation(t *testing.T) {
 	}
 
 	// B sees only its own row.
-	bItems, bTotal, err := s.List(ctx, b, 1, 20)
+	bItems, bTotal, err := s.List(ctx, b, 1, 20, "all")
 	if err != nil {
 		t.Fatalf("List B: %v", err)
 	}
 	if bTotal != 1 || len(bItems) != 1 || bItems[0].CategoryName != "B" {
 		t.Fatalf("isolation broken: total=%d items=%+v", bTotal, bItems)
+	}
+}
+
+func TestCreateIncomeAndKindGate(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	s := NewStore(db)
+	a := createTestUser(t, ctx, db)
+	b := createTestUser(t, ctx, db)
+	expense := createCategory(t, ctx, db, a, KindExpense, "Wydatki")
+	income := createCategory(t, ctx, db, a, KindIncome, "Wpływy")
+	foreignIncome := createCategory(t, ctx, db, b, KindIncome, "Obce wpływy")
+
+	// Income writes with an income category.
+	tx, ok, err := s.Create(ctx, a, income, KindIncome, "100.00", "2026-02-03", "pensja")
+	if err != nil || !ok {
+		t.Fatalf("Create income = %v %v", ok, err)
+	}
+	if tx.Kind != KindIncome || tx.Amount != "100.00" || tx.CategoryName != "Wpływy" {
+		t.Fatalf("unexpected income fields: %+v", tx)
+	}
+
+	// Empty kind defaults to expense.
+	tx, ok, err = s.Create(ctx, a, expense, "", "5.00", "2026-02-03", "")
+	if err != nil || !ok {
+		t.Fatalf("Create default kind = %v %v", ok, err)
+	}
+	if tx.Kind != KindExpense {
+		t.Fatalf("default kind = %q, want expense", tx.Kind)
+	}
+
+	// Mismatched and foreign kinds are rejected as ok=false.
+	for _, tc := range []struct {
+		name     string
+		category string
+		kind     string
+	}{
+		{"expense into income category", income, KindExpense},
+		{"income into expense category", expense, KindIncome},
+		{"income into foreign category", foreignIncome, KindIncome},
+		{"bad kind", expense, "grant"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, ok, err := s.Create(ctx, a, tc.category, tc.kind, "5.00", "2026-02-03", ""); err != nil || ok {
+				t.Fatalf("expected ok=false nil error, got ok=%v err=%v", ok, err)
+			}
+		})
+	}
+}
+
+func TestListKindFilter(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	s := NewStore(db)
+	a := createTestUser(t, ctx, db)
+	exp := createCategory(t, ctx, db, a, KindExpense, "Wydatki")
+	inc := createCategory(t, ctx, db, a, KindIncome, "Wpływy")
+
+	if _, ok, err := s.Create(ctx, a, exp, KindExpense, "10.00", "2026-03-01", ""); err != nil || !ok {
+		t.Fatalf("seed expense: %v %v", ok, err)
+	}
+	if _, ok, err := s.Create(ctx, a, inc, KindIncome, "100.00", "2026-03-02", ""); err != nil || !ok {
+		t.Fatalf("seed income: %v %v", ok, err)
+	}
+
+	all, total, err := s.List(ctx, a, 1, 20, "all")
+	if err != nil || total != 2 || len(all) != 2 {
+		t.Fatalf("all = %d/%d, want 2/2 (err=%v)", total, len(all), err)
+	}
+	expOnly, total, err := s.List(ctx, a, 1, 20, KindExpense)
+	if err != nil || total != 1 || len(expOnly) != 1 || expOnly[0].Kind != KindExpense {
+		t.Fatalf("expense filter broken: total=%d items=%+v err=%v", total, expOnly, err)
+	}
+	incOnly, total, err := s.List(ctx, a, 1, 20, KindIncome)
+	if err != nil || total != 1 || len(incOnly) != 1 || incOnly[0].Kind != KindIncome {
+		t.Fatalf("income filter broken: total=%d items=%+v err=%v", total, incOnly, err)
+	}
+	if _, _, err := s.List(ctx, a, 1, 20, "grant"); err == nil {
+		t.Fatal("bad kind should error")
 	}
 }
 
@@ -229,7 +308,7 @@ func TestListEmpty(t *testing.T) {
 	s := NewStore(db)
 	userID := createTestUser(t, ctx, db)
 
-	items, total, err := s.List(ctx, userID, 1, 20)
+	items, total, err := s.List(ctx, userID, 1, 20, "all")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}

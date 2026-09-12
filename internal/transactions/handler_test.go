@@ -92,6 +92,8 @@ func TestHandlerCreateValidation(t *testing.T) {
 		{"empty category", valid("", "5.00", "2026-02-03")},
 		{"foreign category", valid(foreign, "5.00", "2026-02-03")},
 		{"income category", valid(income, "5.00", "2026-02-03")},
+		{"bad kind", `{"amount":"5.00","category_id":"` + expense + `","occurred_on":"2026-02-03","kind":"grant"}`},
+		{"kind mismatch", `{"amount":"5.00","category_id":"` + income + `","occurred_on":"2026-02-03","kind":"expense"}`},
 		{"unknown category", valid("00000000-0000-0000-0000-000000000000", "5.00", "2026-02-03")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -101,6 +103,69 @@ func TestHandlerCreateValidation(t *testing.T) {
 				t.Fatalf("code = %d, want 400 (%s)", rec.Code, rec.Body.String())
 			}
 		})
+	}
+}
+
+func TestHandlerCreateIncomeAndListKind(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, ctx, db)
+	expense := createCategory(t, ctx, db, userID, KindExpense, "Wydatki")
+	income := createCategory(t, ctx, db, userID, KindIncome, "Wpływy")
+	h := NewHandler(NewStore(db))
+
+	body := `{"amount":"100.00","category_id":"` + income + `","occurred_on":"2026-03-02","kind":"income"}`
+	rec, req := authedRequest(t, http.MethodPost, "/api/transactions", userID, body)
+	h.Create(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("Create income = %d (%s)", rec.Code, rec.Body.String())
+	}
+	var created transactionDTO
+	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+	if created.Kind != KindIncome {
+		t.Fatalf("kind = %q, want income", created.Kind)
+	}
+
+	body = `{"amount":"10.00","category_id":"` + expense + `","occurred_on":"2026-03-01"}`
+	rec, req = authedRequest(t, http.MethodPost, "/api/transactions", userID, body)
+	h.Create(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("Create default kind = %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	for _, tc := range []struct {
+		target string
+		total  int
+		kind   string
+	}{
+		{"/api/transactions?kind=income", 1, KindIncome},
+		{"/api/transactions?kind=expense", 1, KindExpense},
+		{"/api/transactions?kind=all", 2, ""},
+		{"/api/transactions", 2, ""},
+	} {
+		rec, req := authedRequest(t, http.MethodGet, tc.target, userID, "")
+		h.List(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("List %s = %d", tc.target, rec.Code)
+		}
+		var page listDTO
+		if err := json.NewDecoder(rec.Body).Decode(&page); err != nil {
+			t.Fatalf("decode list: %v", err)
+		}
+		if page.Total != tc.total || len(page.Items) != tc.total {
+			t.Fatalf("List %s total=%d len=%d, want %d", tc.target, page.Total, len(page.Items), tc.total)
+		}
+		if tc.kind != "" && page.Items[0].Kind != tc.kind {
+			t.Fatalf("List %s kind=%q, want %q", tc.target, page.Items[0].Kind, tc.kind)
+		}
+	}
+
+	rec, req = authedRequest(t, http.MethodGet, "/api/transactions?kind=grant", userID, "")
+	h.List(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad kind = %d, want 400", rec.Code)
 	}
 }
 
@@ -135,6 +200,9 @@ func TestSummaryHandler(t *testing.T) {
 	}
 	if len(out.Rows) != 1 || out.Rows[0].Total != "12.50" || len(out.Items) != 1 {
 		t.Fatalf("unexpected rows/items: %+v", out)
+	}
+	if out.Budget.ExpenseTotal != "12.50" || out.Budget.IncomeTotal != "0" || out.Budget.RatioPct != nil {
+		t.Fatalf("unexpected budget: %+v (want 12.50/0/nil)", out.Budget)
 	}
 
 	for _, tc := range []struct {

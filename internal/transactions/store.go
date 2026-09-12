@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// Kinds of transactions. The store only writes expenses for now; income lands in S-06.
+// Kinds of transactions.
 const (
 	KindExpense = "expense"
 	KindIncome  = "income"
@@ -74,14 +75,22 @@ func truncateRunes(s string, max int) string {
 	return string(r[:max])
 }
 
-// Create records one expense owned by userID. ok=false means the input was
-// rejected (bad amount/date, or a category that is missing, foreign, or not an
-// expense); an error is returned only for a real database failure.
-func (s *Store) Create(ctx context.Context, userID, categoryID, amount, occurredOn, description string) (Transaction, bool, error) {
+// Create records one transaction owned by userID. kind is expense|income
+// (empty trims to expense). ok=false means the input was rejected (bad
+// kind/amount/date, or a category that is missing, foreign, or of the other
+// kind); an error is returned only for a real database failure.
+func (s *Store) Create(ctx context.Context, userID, categoryID, kind, amount, occurredOn, description string) (Transaction, bool, error) {
 	amount = strings.TrimSpace(amount)
 	categoryID = strings.TrimSpace(categoryID)
+	kind = strings.TrimSpace(kind)
+	if kind == "" {
+		kind = KindExpense
+	}
 	occurred, err := time.Parse("2006-01-02", occurredOn)
 	if userID == "" || categoryID == "" || !uuidRe.MatchString(categoryID) || !positiveAmount(amount) || err != nil {
+		return Transaction{}, false, nil
+	}
+	if kind != KindExpense && kind != KindIncome {
 		return Transaction{}, false, nil
 	}
 	description = truncateRunes(strings.TrimSpace(description), MaxDescriptionLen)
@@ -92,16 +101,16 @@ func (s *Store) Create(ctx context.Context, userID, categoryID, amount, occurred
 	err = s.db.QueryRowContext(ctx,
 		`WITH ins AS (
 		     INSERT INTO transactions (user_id, category_id, kind, amount, occurred_on, description)
-		     SELECT $1, c.id, 'expense', $2::numeric, $3::date, $4
+		     SELECT $1, c.id, $6, $2::numeric, $3::date, $4
 		     FROM categories c
-		     WHERE c.id = $5 AND c.user_id = $1 AND c.kind = 'expense'
+		     WHERE c.id = $5 AND c.user_id = $1 AND c.kind = $6
 		     RETURNING id, kind, category_id, amount, occurred_on, description, created_at
 		 )
 		 SELECT ins.id, ins.kind, ins.category_id, c.name, p.name, ins.amount::text, ins.occurred_on, ins.description, ins.created_at
 		 FROM ins
 		 JOIN categories c ON c.id = ins.category_id
 		 LEFT JOIN categories p ON p.id = c.parent_id`,
-		userID, amount, occurred, description, categoryID,
+		userID, amount, occurred, description, categoryID, kind,
 	).Scan(&t.ID, &t.Kind, &t.CategoryID, &t.CategoryName, &parent, &t.Amount, &t.OccurredOn, &t.Description, &t.CreatedAt)
 	if err == sql.ErrNoRows {
 		return Transaction{}, false, nil
@@ -114,9 +123,17 @@ func (s *Store) Create(ctx context.Context, userID, categoryID, amount, occurred
 }
 
 // List returns one page of the user's operations, newest first, with the total
-// row count so callers can drive "load more".
-func (s *Store) List(ctx context.Context, userID string, page, limit int) ([]Transaction, int, error) {
+// row count so callers can drive "load more". kind is all|expense|income
+// (empty trims to all); anything else is an invalid-input error.
+func (s *Store) List(ctx context.Context, userID string, page, limit int, kind string) ([]Transaction, int, error) {
 	if userID == "" {
+		return nil, 0, fmt.Errorf("transactions: list: invalid input")
+	}
+	kind = strings.TrimSpace(kind)
+	if kind == "" {
+		kind = "all"
+	}
+	if kind != "all" && kind != KindExpense && kind != KindIncome {
 		return nil, 0, fmt.Errorf("transactions: list: invalid input")
 	}
 	if page < 1 {
@@ -126,23 +143,35 @@ func (s *Store) List(ctx context.Context, userID string, page, limit int) ([]Tra
 		limit = 20
 	}
 
+	kindFilter := ""
+	countArgs := []any{userID}
+	listArgs := []any{userID}
+	if kind != "all" {
+		kindFilter = ` AND t.kind = $2`
+		countArgs = append(countArgs, kind)
+		listArgs = append(listArgs, kind)
+	}
+
 	// ponytail: COUNT(*) per request is fine at personal scale; denormalize if it ever matters.
 	var total int
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT count(*) FROM transactions WHERE user_id = $1`, userID,
+		`SELECT count(*) FROM transactions t WHERE t.user_id = $1`+kindFilter, countArgs...,
 	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("transactions: list count: %w", err)
 	}
 
+	limitPos := len(listArgs) + 1
+	offsetPos := len(listArgs) + 2
+	listArgs = append(listArgs, limit, (page-1)*limit)
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT t.id, t.kind, t.category_id, c.name, p.name, t.amount::text, t.occurred_on, t.description, t.created_at
 		 FROM transactions t
 		 JOIN categories c ON c.id = t.category_id
 		 LEFT JOIN categories p ON p.id = c.parent_id
-		 WHERE t.user_id = $1
+		 WHERE t.user_id = $1`+kindFilter+`
 		 ORDER BY t.occurred_on DESC, t.created_at DESC
-		 LIMIT $2 OFFSET $3`,
-		userID, limit, (page-1)*limit,
+		 LIMIT $`+strconv.Itoa(limitPos)+` OFFSET $`+strconv.Itoa(offsetPos),
+		listArgs...,
 	)
 	if err != nil {
 		return nil, 0, fmt.Errorf("transactions: list: %w", err)

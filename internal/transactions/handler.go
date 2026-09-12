@@ -45,6 +45,7 @@ type createInput struct {
 	CategoryID  string `json:"category_id"`
 	OccurredOn  string `json:"occurred_on"`
 	Description string `json:"description,omitempty"`
+	Kind        string `json:"kind,omitempty"`
 }
 
 type listDTO struct {
@@ -62,14 +63,22 @@ type summaryRowDTO struct {
 }
 
 type summaryDTO struct {
-	From  string           `json:"from"`
-	To    string           `json:"to"`
-	Rows  []summaryRowDTO  `json:"rows"`
-	Total string           `json:"total"`
-	Items []transactionDTO `json:"items"`
+	From   string           `json:"from"`
+	To     string           `json:"to"`
+	Rows   []summaryRowDTO  `json:"rows"`
+	Total  string           `json:"total"`
+	Items  []transactionDTO `json:"items"`
+	Budget budgetDTO        `json:"budget"`
 }
 
-// Create records an expense for the logged-in account.
+type budgetDTO struct {
+	ExpenseTotal string  `json:"expense_total"`
+	IncomeTotal  string  `json:"income_total"`
+	RatioPct     *string `json:"ratio_pct"`
+}
+
+// Create records a transaction for the logged-in account. kind is optional
+// (empty trims to expense); anything outside expense|income is a 400.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		methodNotAllowed(w)
@@ -89,7 +98,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	amount := strings.TrimSpace(in.Amount)
 	categoryID := strings.TrimSpace(in.CategoryID)
 	occurredOn := strings.TrimSpace(in.OccurredOn)
+	kind := strings.TrimSpace(in.Kind)
+	if kind == "" {
+		kind = KindExpense
+	}
 	if amount == "" || categoryID == "" {
+		writeInvalid(w)
+		return
+	}
+	if kind != KindExpense && kind != KindIncome {
 		writeInvalid(w)
 		return
 	}
@@ -97,9 +114,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writeInvalid(w)
 		return
 	}
-	// The store rejects bad amounts, dates, and foreign/income/missing
+	// The store rejects bad amounts, dates, and foreign/mismatched/missing
 	// categories uniformly as ok=false; only a real DB fault is an error.
-	tx, created, err := h.store.Create(r.Context(), string(id), categoryID, amount, occurredOn, in.Description)
+	tx, created, err := h.store.Create(r.Context(), string(id), categoryID, kind, amount, occurredOn, in.Description)
 	if err != nil {
 		writeServerError(w)
 		return
@@ -124,7 +141,15 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	page := parseBounded(r.URL.Query().Get("page"), 1, 0)
 	limit := parseBounded(r.URL.Query().Get("limit"), defaultLimit, maxLimit)
-	items, total, err := h.store.List(r.Context(), string(id), page, limit)
+	kind := strings.TrimSpace(r.URL.Query().Get("kind"))
+	if kind == "" {
+		kind = "all"
+	}
+	if kind != "all" && kind != KindExpense && kind != KindIncome {
+		writeInvalid(w)
+		return
+	}
+	items, total, err := h.store.List(r.Context(), string(id), page, limit, kind)
 	if err != nil {
 		writeServerError(w)
 		return
@@ -159,7 +184,7 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	if raw := strings.TrimSpace(q.Get("category_id")); raw != "" {
 		categoryIDs = strings.Split(raw, ",")
 	}
-	rows, total, items, ok, err := h.store.Summary(r.Context(), string(id), from, to, categoryIDs)
+	rows, total, items, budget, ok, err := h.store.Summary(r.Context(), string(id), from, to, categoryIDs)
 	if err != nil {
 		writeServerError(w)
 		return
@@ -181,7 +206,8 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	for _, t := range items {
 		itemDTOs = append(itemDTOs, toDTO(t))
 	}
-	writeJSON(w, http.StatusOK, summaryDTO{From: from, To: to, Rows: rowDTOs, Total: total, Items: itemDTOs})
+	writeJSON(w, http.StatusOK, summaryDTO{From: from, To: to, Rows: rowDTOs, Total: total, Items: itemDTOs,
+		Budget: budgetDTO{ExpenseTotal: budget.ExpenseTotal, IncomeTotal: budget.IncomeTotal, RatioPct: budget.RatioPct}})
 }
 
 // parseBounded reads a positive query int, falling back to def when absent or
