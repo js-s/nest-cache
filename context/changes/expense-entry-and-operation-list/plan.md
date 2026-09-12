@@ -123,6 +123,7 @@ Dwa endpointy w stylu kategorii: `POST` tworzy wydatek, `GET` zwraca paginowaną
 **Contract**:
 - DTO odpowiedzi: `{ id, amount (string), kind, category_id, category_name, parent_name?, occurred_on (YYYY-MM-DD), description }`. `parent_name` tylko gdy kategoria ma rodzica.
 - `POST` body: `{ amount: string, category_id: string, occurred_on: string, description?: string }`; sukces → 201 z DTO. Walidacja: `MaxBytesReader` 4KB, `amount` i `category_id` niepuste, `occurred_on` w formacie `2006-01-02`.
+- Store `Create` sygnalizuje odrzucenie wejścia jako `ok=false` (bez błędu); handler mapuje `ok=false` → 400, a `err` → 500. Nie traktować `ok=false` jako sukcesu.
 - `GET /api/transactions?page=&limit=` — `page` domyślnie 1 (min 1), `limit` domyślnie 20 (max 100); odpowiedź `{ items: [...], page, limit, total }`.
 - Brak konta w kontekście → 401; zła metoda → 405 (wzorzec `categories/handler.go`).
 
@@ -248,14 +249,14 @@ Nowa, wyłącznie dodająca migracja `0004_transactions.sql`; brak zmian w istni
 
 #### Automated
 
-- [x] 1.1 Kompilacja: `go build ./...`
-- [x] 1.2 Testy z lokalną bazą przechodzą: `DATABASE_URL=... go test ./internal/transactions/...`
-- [x] 1.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...`
-- [x] 1.4 Migracja aplikuje się idempotentnie (dwa uruchomienia bez błędu).
+- [x] 1.1 Kompilacja: `go build ./...` — b7a46df
+- [x] 1.2 Testy z lokalną bazą przechodzą: `DATABASE_URL=... go test ./internal/transactions/...` — b7a46df
+- [x] 1.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...` — b7a46df
+- [x] 1.4 Migracja aplikuje się idempotentnie (dwa uruchomienia bez błędu). — b7a46df
 
 #### Manual
 
-- [ ] 1.5 W `psql` widać tabelę `transactions` z indeksem i constraintami.
+- [x] 1.5 W `psql` widać tabelę `transactions` z indeksem i constraintami. — b7a46df
 
 ### Phase 2: API i trasy
 

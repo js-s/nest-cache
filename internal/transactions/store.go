@@ -24,6 +24,10 @@ const MaxAmount = "9999999999.99"
 // amountRe accepts at most 10 integer digits and 2 decimal digits, matching NUMERIC(12,2).
 var amountRe = regexp.MustCompile(`^\d{1,10}(\.\d{1,2})?$`)
 
+// uuidRe matches the canonical UUID shape Postgres stores, so bad category IDs
+// are rejected as input (ok=false) instead of surfacing as a DB error.
+var uuidRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
 // Transaction is one operation with its display category names resolved.
 type Transaction struct {
 	ID           string
@@ -77,7 +81,7 @@ func (s *Store) Create(ctx context.Context, userID, categoryID, amount, occurred
 	amount = strings.TrimSpace(amount)
 	categoryID = strings.TrimSpace(categoryID)
 	occurred, err := time.Parse("2006-01-02", occurredOn)
-	if userID == "" || categoryID == "" || !positiveAmount(amount) || err != nil {
+	if userID == "" || categoryID == "" || !uuidRe.MatchString(categoryID) || !positiveAmount(amount) || err != nil {
 		return Transaction{}, false, nil
 	}
 	description = truncateRunes(strings.TrimSpace(description), MaxDescriptionLen)

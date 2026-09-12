@@ -22,6 +22,8 @@ func openTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
+	// Registered before per-test row cleanups: LIFO runs those first, then this close.
+	t.Cleanup(func() { _ = db.Close() })
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
@@ -76,7 +78,6 @@ func createSubcategory(t *testing.T, ctx context.Context, db *sql.DB, userID, pa
 
 func TestCreateExpense(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
 	ctx := context.Background()
 	s := NewStore(db)
 	userID := createTestUser(t, ctx, db)
@@ -106,7 +107,6 @@ func TestCreateExpense(t *testing.T) {
 
 func TestCreatePreservesMoneyPrecision(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
 	ctx := context.Background()
 	s := NewStore(db)
 	userID := createTestUser(t, ctx, db)
@@ -134,7 +134,6 @@ func TestCreatePreservesMoneyPrecision(t *testing.T) {
 
 func TestCreateRejectsInvalidInput(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
 	ctx := context.Background()
 	s := NewStore(db)
 	a := createTestUser(t, ctx, db)
@@ -161,6 +160,7 @@ func TestCreateRejectsInvalidInput(t *testing.T) {
 		{"income category", a, income, "5.00", "2026-02-03"},
 		{"unknown category", a, "00000000-0000-0000-0000-000000000000", "5.00", "2026-02-03"},
 		{"empty category", a, "", "5.00", "2026-02-03"},
+		{"malformed category", a, "not-a-uuid", "5.00", "2026-02-03"},
 		{"bad date", a, expense, "5.00", "03-02-2026"},
 		{"bad date text", a, expense, "5.00", "yesterday"},
 	}
@@ -175,7 +175,6 @@ func TestCreateRejectsInvalidInput(t *testing.T) {
 
 func TestListPaginationAndIsolation(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
 	ctx := context.Background()
 	s := NewStore(db)
 	a := createTestUser(t, ctx, db)
@@ -226,7 +225,6 @@ func TestListPaginationAndIsolation(t *testing.T) {
 
 func TestListEmpty(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
 	ctx := context.Background()
 	s := NewStore(db)
 	userID := createTestUser(t, ctx, db)
