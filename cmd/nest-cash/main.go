@@ -71,16 +71,35 @@ func main() {
 		store := auth.NewStore(db)
 		authResolver = auth.NewResolver(store)
 		authHandler = auth.NewHandler(store, prodSecure())
+		go purgeExpiredSessions(store)
 	}
 
 	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: (application{db: db, staticDir: staticDir, auth: authHandler, resolver: authResolver}).routes(),
+		Addr:              ":" + port,
+		Handler:           (application{db: db, staticDir: staticDir, auth: authHandler, resolver: authResolver}).routes(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	log.Printf("nest-cash listening on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
+	}
+}
+
+// purgeExpiredSessions reaps dead session rows at boot and hourly after.
+func purgeExpiredSessions(store *auth.Store) {
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if n, err := store.DeleteExpiredSessions(ctx); err != nil {
+			log.Printf("purge expired sessions: %v", err)
+		} else if n > 0 {
+			log.Printf("purged %d expired sessions", n)
+		}
+		cancel()
+		time.Sleep(time.Hour)
 	}
 }
 

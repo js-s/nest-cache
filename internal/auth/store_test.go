@@ -97,9 +97,17 @@ func TestSessionLifecycle(t *testing.T) {
 		t.Fatalf("unknown session must not resolve: ok %v, err %v", ok, err)
 	}
 
-	// Sliding refresh keeps a live session resolvable.
+	// Sliding refresh keeps a live session resolvable...
 	if err := s.TouchSession(ctx, live, time.Now().Add(60*24*time.Hour)); err != nil {
 		t.Fatalf("TouchSession live: %v", err)
+	}
+	// ...and actually moves expires_at forward (not a silent no-op).
+	var touched time.Time
+	if err := db.QueryRowContext(ctx, `SELECT expires_at FROM sessions WHERE token_hash = $1`, live).Scan(&touched); err != nil {
+		t.Fatalf("read touched expiry: %v", err)
+	}
+	if !touched.After(time.Now().Add(59 * 24 * time.Hour)) {
+		t.Fatalf("TouchSession did not extend expiry: got %v", touched)
 	}
 	if _, _, ok, err := s.FindSessionUser(ctx, live); err != nil || !ok {
 		t.Fatalf("touched session should resolve: ok %v, err %v", ok, err)

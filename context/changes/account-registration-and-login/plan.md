@@ -116,7 +116,7 @@ bcrypt passwords, opaque session cookie, `account.Resolver` impl, four endpoints
 
 **Intent**: `POST /api/auth/register` (validate→hash→create→auto-login), `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` (behind `RequireAccount`).
 
-**Contract**: Routes `POST /api/auth/register|login|logout`, `GET /api/auth/me`; cookie `nest_session`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` iff TLS/prod, `MaxAge=2592000` + sliding refresh on `me`/authed hits; `me` returns `{id,email}`; logout deletes server session + clears cookie; bad credentials → uniform 401 `{"error":"unauthorized"}`; validation failures → 400 `{"error":"invalid_request"}`; `Register` duplicate email → 409 `{"error":"email_taken"}` without revealing login-oracle beyond register.
+**Contract**: Routes `POST /api/auth/register|login|logout`, `GET /api/auth/me`; cookie `nest_session`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` iff TLS/prod, `MaxAge=2592000` + sliding refresh on `GET /api/auth/me` (S-01's only authed route; extend to other authed hits when S-02+ adds them); `me` returns `{id,email}`; logout deletes server session + clears cookie; bad credentials → uniform 401 `{"error":"unauthorized"}`; validation failures → 400 `{"error":"invalid_request"}`; `Register` duplicate email → 409 `{"error":"email_taken"}` without revealing login-oracle beyond register.
 
 #### 3. Wiring + startup gate
 

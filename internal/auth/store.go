@@ -106,14 +106,16 @@ func (s *Store) CreateSession(ctx context.Context, tokenHash, userID string, exp
 
 // FindSessionUser resolves a live session to its owner.
 // Expired or unknown hashes return ok=false — they never resolve.
+// PasswordHash is deliberately not loaded: session resolution only needs
+// identity.
 func (s *Store) FindSessionUser(ctx context.Context, tokenHash string) (user User, session Session, ok bool, err error) {
 	err = s.db.QueryRowContext(ctx,
-		`SELECT u.id, u.email, u.password_hash, u.created_at,
+		`SELECT u.id, u.email, u.created_at,
 		        s.token_hash, s.user_id, s.expires_at, s.created_at
 		 FROM sessions s JOIN users u ON u.id = s.user_id
 		 WHERE s.token_hash = $1 AND s.expires_at > now()`,
 		tokenHash,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt,
+	).Scan(&user.ID, &user.Email, &user.CreatedAt,
 		&session.TokenHash, &session.UserID, &session.ExpiresAt, &session.CreatedAt)
 	if err == sql.ErrNoRows {
 		return User{}, Session{}, false, nil

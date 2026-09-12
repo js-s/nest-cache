@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -13,18 +14,27 @@ import (
 // minPasswordLength mirrors the web form rule (plan: inline min 8).
 const minPasswordLength = 8
 
+// maxRequestBodyBytes caps credentials bodies so an oversized payload is
+// rejected before it is fully buffered.
+const maxRequestBodyBytes = 4 << 10
+
+// dummyPasswordHash is a valid cost-12 bcrypt hash compared against when a
+// login email is unknown, so response time does not reveal account existence.
+const dummyPasswordHash = "$2a$12$QPVl55cjZDREwiCWTLeznuNZKMvCf1.3z1984e7WezqtIcoSCGFpa"
+
 // Handler serves register/login/logout/me over the users/sessions store.
 type Handler struct {
 	store *Store
 	// secure is the base Secure-cookie flag for non-TLS requests
 	// (prod env). Per-request TLS / X-Forwarded-Proto upgrades to Secure.
-	secure bool
+	secure  bool
+	limiter *ipLimiter
 }
 
 // NewHandler returns a Handler over store. secure enables the Secure
 // cookie attribute outside TLS (prod); localhost dev passes false.
 func NewHandler(store *Store, secure bool) *Handler {
-	return &Handler{store: store, secure: secure}
+	return &Handler{store: store, secure: secure, limiter: newIPLimiter()}
 }
 
 type credentials struct {
@@ -88,7 +98,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w)
 		return
 	}
-	if !found || !CheckPassword(user.PasswordHash, pw) {
+	if !found {
+		// Equalize timing: an unknown email must pay the same bcrypt cost
+		// as a known email with a wrong password (no account oracle).
+		_ = CheckPassword(dummyPasswordHash, pw)
+		writeUnauthorized(w)
+		return
+	}
+	if !CheckPassword(user.PasswordHash, pw) {
 		writeUnauthorized(w)
 		return
 	}
@@ -107,6 +124,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	if cookie, err := r.Cookie(CookieName); err == nil && cookie.Value != "" {
 		if err := h.store.DeleteSession(r.Context(), HashToken(cookie.Value)); err != nil {
+			h.clearCookie(w, r)
 			writeServerError(w)
 			return
 		}
@@ -149,6 +167,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 // error response is already written (400 invalid_request).
 func (h *Handler) parseCredentials(w http.ResponseWriter, r *http.Request) (email, pw string, ok bool) {
 	var c credentials
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 		writeInvalid(w)
 		return "", "", false
@@ -215,12 +234,19 @@ func (h *Handler) clearCookie(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// validEmail accepts addresses the forms can round-trip: net/mail syntax plus
+// a domain with real labels (a dot, no leading/trailing dot, no empty label).
 func validEmail(email string) bool {
-	at := strings.IndexByte(email, '@')
-	if at < 1 || at == len(email)-1 {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
 		return false
 	}
-	return strings.Contains(email[at+1:], ".")
+	at := strings.LastIndexByte(email, '@')
+	domain := email[at+1:]
+	return strings.Contains(domain, ".") &&
+		!strings.HasPrefix(domain, ".") &&
+		!strings.HasSuffix(domain, ".") &&
+		!strings.Contains(domain, "..")
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
