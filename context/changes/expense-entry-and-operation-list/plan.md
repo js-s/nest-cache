@@ -262,9 +262,9 @@ Nowa, wyłącznie dodająca migracja `0004_transactions.sql`; brak zmian w istni
 
 #### Automated
 
-- [ ] 2.1 Kompilacja: `go build ./...`
-- [ ] 2.2 Testy handlerów przechodzą: `DATABASE_URL=... go test ./internal/transactions/...`
-- [ ] 2.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...`
+- [x] 2.1 Kompilacja: `go build ./...`
+- [x] 2.2 Testy handlerów przechodzą: `DATABASE_URL=... go test ./internal/transactions/...`
+- [x] 2.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...`
 
 #### Manual
 

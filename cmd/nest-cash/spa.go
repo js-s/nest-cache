@@ -28,6 +28,10 @@ func (a application) routes() http.Handler {
 		mux.Handle("GET /api/categories", account.RequireAccount(a.resolver, http.HandlerFunc(a.categories.List)))
 		mux.Handle("POST /api/categories", account.RequireAccount(a.resolver, http.HandlerFunc(a.categories.Create)))
 	}
+	if a.transactions != nil && a.resolver != nil {
+		mux.Handle("GET /api/transactions", account.RequireAccount(a.resolver, http.HandlerFunc(a.transactions.List)))
+		mux.Handle("POST /api/transactions", account.RequireAccount(a.resolver, http.HandlerFunc(a.transactions.Create)))
+	}
 	mux.HandleFunc("/api", a.apiNotFound)
 	mux.Handle("/api/", http.HandlerFunc(a.apiNotFound))
 	mux.Handle("/", newSPAHandler(staticDir))
