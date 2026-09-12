@@ -3,7 +3,7 @@ project: NestCash
 version: 1
 status: draft
 created: 2026-09-11
-updated: 2026-09-12
+updated: 2026-09-13
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -37,7 +37,7 @@ Domowy budżet ginie w rozproszonych arkuszach i plikach tekstowych bez spójneg
 | S-03 | predefined-and-custom-categories | użytkownik może zobaczyć w interfejsie webowym predefiniowane kategorie i podkategorie przy pierwszym użyciu i utworzyć własne kategorie oraz podkategorie wydatków lub przychodów. | S-01 | FR-003 | done |
 | S-04 | expense-entry-and-operation-list | użytkownik może wprowadzić wydatek w interfejsie webowym z kwotą, kategorią, datą i opcjonalnym opisem oraz zobaczyć go na paginowanej liście własnych operacji. | S-03 | US-01, FR-005, FR-007 | done |
 | S-05 | filtered-expense-summary | użytkownik może zobaczyć zapisany wydatek w interfejsie webowym, w tabelarycznym podsumowaniu filtrowanym jednocześnie po okresie i kategorii. | S-04 | US-01, FR-009 | blocked |
-| S-06 | income-and-budget-ratio | użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej. | S-05 | FR-006, Business Logic, NFR (response time) | proposed |
+| S-06 | income-and-budget-ratio | użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej. | S-05 | FR-006, Business Logic, NFR (response time) | done |
 
 ## Baseline
 
@@ -143,7 +143,7 @@ Każdy poniższy slice jest planowany jako jeden pionowy przyrost: interfejs web
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Formularz przychodu, agregacja API i wskaźnik w podsumowaniu mają sens dopiero po działającym przepływie wydatku; wynik musi pozostać pasywnym sygnałem bez dokładania powiadomień poza zakresem.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -182,3 +182,4 @@ Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych z
 - **S-02: użytkownik widzi spójny i czytelny interfejs webowy — panel logowania i rejestracji jest uporządkowany, pola formularzy są większe i wygodniejsze, a układ ekranów jest logiczny zamiast surowy.** — Archived 2026-09-12 → `context/archive/2026-09-12-web-ui-styling/`. Lesson: —.
 - **S-03: użytkownik może zobaczyć w interfejsie webowym predefiniowane kategorie i podkategorie przy pierwszym użyciu oraz utworzyć własne kategorie i podkategorie wydatków lub przychodów (np. grupa „Codzienne” z podkategoriami „Artykuły spożywcze” i „Chemia gospodarcza”).** — Archived 2026-09-12 → `context/archive/2026-09-12-predefined-and-custom-categories/`. Lesson: —.
 - **S-04: użytkownik może wprowadzić wydatek w interfejsie webowym z kwotą, kategorią, datą i opcjonalnym opisem oraz zobaczyć go na paginowanej liście własnych operacji.** — Archived 2026-09-12 → `context/archive/2026-09-12-expense-entry-and-operation-list/`. Lesson: —.
+- **S-06: użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej.** — Archived 2026-09-12 → `context/archive/2026-09-12-income-and-budget-ratio/`. Lesson: —.
