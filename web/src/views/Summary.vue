@@ -84,6 +84,8 @@ function resolveRange(): { from: string; to: string } | null {
 }
 
 async function fetchSummary(): Promise<void> {
+  // ponytail: guard against double submit (Enter + click) racing two requests.
+  if (fetching.value) return
   filterError.value = ''
   const range = resolveRange()
   if (!range) {

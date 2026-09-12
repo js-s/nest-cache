@@ -87,6 +87,14 @@ func (s *Store) Summary(ctx context.Context, userID, from, to string, categoryID
 		ids = append(ids, id)
 	}
 
+	// ponytail: one read-only tx so rows/total/items/budget share a snapshot;
+	// a concurrent write from another tab can't skew budget vs breakdown.
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, "", nil, BudgetRatio{}, false, fmt.Errorf("transactions: summary begin: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Gate: every requested category must exist, belong to caller, be expense.
 	// Unknown/foreign/income IDs are invalid input (400), not silent zeros.
 	// ponytail: IN with expanded placeholders, no array driver dependency.
@@ -101,7 +109,7 @@ func (s *Store) Summary(ctx context.Context, userID, from, to string, categoryID
 		}
 		inList = " AND id IN (" + strings.Join(holders, ",") + ")"
 		var matched int
-		if err := s.db.QueryRowContext(ctx,
+		if err := tx.QueryRowContext(ctx,
 			`SELECT count(*) FROM categories WHERE user_id = $1 AND kind = 'expense'`+inList,
 			catArgs...,
 		).Scan(&matched); err != nil {
@@ -123,7 +131,7 @@ func (s *Store) Summary(ctx context.Context, userID, from, to string, categoryID
 		filter += ` AND t.category_id IN (` + strings.Join(holders, ",") + `)`
 	}
 
-	rows, err := s.db.QueryContext(ctx,
+	rows, err := tx.QueryContext(ctx,
 		`SELECT c.id, c.name, p.name, SUM(t.amount)::text
 		 FROM transactions t
 		 JOIN categories c ON c.id = t.category_id
@@ -160,7 +168,7 @@ func (s *Store) Summary(ctx context.Context, userID, from, to string, categoryID
 		return nil, "", nil, BudgetRatio{}, false, fmt.Errorf("transactions: summary total: %w", err)
 	}
 
-	itemRows, err := s.db.QueryContext(ctx,
+	itemRows, err := tx.QueryContext(ctx,
 		`SELECT t.id, t.kind, t.category_id, c.name, p.name, t.amount::text, t.occurred_on, t.description, t.created_at
 		 FROM transactions t
 		 JOIN categories c ON c.id = t.category_id
@@ -204,5 +212,8 @@ func (s *Store) Summary(ctx context.Context, userID, from, to string, categoryID
 		return nil, "", nil, BudgetRatio{}, false, fmt.Errorf("transactions: summary budget income: %w", err)
 	}
 	budget := BudgetRatio{ExpenseTotal: budgetExpense, IncomeTotal: budgetIncome, RatioPct: ratioPct(budgetExpense, budgetIncome)}
+	if err := tx.Commit(); err != nil {
+		return nil, "", nil, BudgetRatio{}, false, fmt.Errorf("transactions: summary commit: %w", err)
+	}
 	return out, total, items, budget, true, nil
 }

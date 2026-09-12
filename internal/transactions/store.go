@@ -16,6 +16,10 @@ const (
 	KindIncome  = "income"
 )
 
+// MaxListLimit caps the page size even for direct store callers;
+// the handler clamps to the same value via parseBounded.
+const MaxListLimit = 100
+
 // MaxDescriptionLen caps descriptions; mirrored by the DB CHECK constraint.
 const MaxDescriptionLen = 500
 
@@ -141,6 +145,9 @@ func (s *Store) List(ctx context.Context, userID string, page, limit int, kind s
 	}
 	if limit < 1 {
 		limit = 20
+	}
+	if limit > MaxListLimit {
+		limit = MaxListLimit
 	}
 
 	kindFilter := ""
