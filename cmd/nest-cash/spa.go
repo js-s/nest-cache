@@ -31,6 +31,7 @@ func (a application) routes() http.Handler {
 	if a.transactions != nil && a.resolver != nil {
 		mux.Handle("GET /api/transactions", account.RequireAccount(a.resolver, http.HandlerFunc(a.transactions.List)))
 		mux.Handle("POST /api/transactions", account.RequireAccount(a.resolver, http.HandlerFunc(a.transactions.Create)))
+		mux.Handle("GET /api/summary", account.RequireAccount(a.resolver, http.HandlerFunc(a.transactions.Summary)))
 	}
 	mux.HandleFunc("/api", a.apiNotFound)
 	mux.Handle("/api/", http.HandlerFunc(a.apiNotFound))

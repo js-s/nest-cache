@@ -104,6 +104,71 @@ func TestHandlerCreateValidation(t *testing.T) {
 	}
 }
 
+func TestSummaryHandler(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, ctx, db)
+	cat := createCategory(t, ctx, db, userID, KindExpense, "Jedzenie")
+	h := NewHandler(NewStore(db))
+
+	body := `{"amount":"12.50","category_id":"` + cat + `","occurred_on":"2026-09-05"}`
+	rec, req := authedRequest(t, http.MethodPost, "/api/transactions", userID, body)
+	h.Create(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("seed Create = %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	rec, req = authedRequest(t, http.MethodGet, "/api/summary?from=2026-09-01&to=2026-09-30", userID, "")
+	h.Summary(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Summary = %d, want 200 (%s)", rec.Code, rec.Body.String())
+	}
+	if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store", cc)
+	}
+	var out summaryDTO
+	if err := json.NewDecoder(rec.Body).Decode(&out); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if out.From != "2026-09-01" || out.To != "2026-09-30" || out.Total != "12.50" {
+		t.Fatalf("unexpected summary: %+v", out)
+	}
+	if len(out.Rows) != 1 || out.Rows[0].Total != "12.50" || len(out.Items) != 1 {
+		t.Fatalf("unexpected rows/items: %+v", out)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		target string
+	}{
+		{"missing from", "/api/summary?to=2026-09-30"},
+		{"missing to", "/api/summary?from=2026-09-01"},
+		{"bad date", "/api/summary?from=x&to=2026-09-30"},
+		{"from after to", "/api/summary?from=2026-09-30&to=2026-09-01"},
+		{"bad uuid", "/api/summary?from=2026-09-01&to=2026-09-30&category_id=nope"},
+		{"unknown uuid", "/api/summary?from=2026-09-01&to=2026-09-30&category_id=00000000-0000-0000-0000-000000000000"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec, req := authedRequest(t, http.MethodGet, tc.target, userID, "")
+			h.Summary(rec, req)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("code = %d, want 400 (%s)", rec.Code, rec.Body.String())
+			}
+		})
+	}
+
+	rec = httptest.NewRecorder()
+	h.Summary(rec, httptest.NewRequest(http.MethodGet, "/api/summary?from=2026-09-01&to=2026-09-30", nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("Summary without account = %d, want 401", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.Summary(rec, httptest.NewRequest(http.MethodPost, "/api/summary?from=2026-09-01&to=2026-09-30", nil))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Summary wrong method = %d, want 405", rec.Code)
+	}
+}
+
 func TestHandlerUnauthorizedWithoutAccount(t *testing.T) {
 	db := openTestDB(t)
 	h := NewHandler(NewStore(db))

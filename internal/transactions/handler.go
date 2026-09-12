@@ -54,6 +54,21 @@ type listDTO struct {
 	Total int              `json:"total"`
 }
 
+type summaryRowDTO struct {
+	CategoryID   string `json:"category_id"`
+	CategoryName string `json:"category_name"`
+	ParentName   string `json:"parent_name,omitempty"`
+	Total        string `json:"total"`
+}
+
+type summaryDTO struct {
+	From  string           `json:"from"`
+	To    string           `json:"to"`
+	Rows  []summaryRowDTO  `json:"rows"`
+	Total string           `json:"total"`
+	Items []transactionDTO `json:"items"`
+}
+
 // Create records an expense for the logged-in account.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -119,6 +134,54 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		out = append(out, toDTO(t))
 	}
 	writeJSON(w, http.StatusOK, listDTO{Items: out, Page: page, Limit: limit, Total: total})
+}
+
+// Summary returns expense aggregates per category plus the newest items
+// under the same from/to/category_id filter.
+func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	id, ok := account.AccountIDFromContext(r.Context())
+	if !ok {
+		writeUnauthorized(w)
+		return
+	}
+	q := r.URL.Query()
+	from := strings.TrimSpace(q.Get("from"))
+	to := strings.TrimSpace(q.Get("to"))
+	if from == "" || to == "" {
+		writeInvalid(w)
+		return
+	}
+	var categoryIDs []string
+	if raw := strings.TrimSpace(q.Get("category_id")); raw != "" {
+		categoryIDs = strings.Split(raw, ",")
+	}
+	rows, total, items, ok, err := h.store.Summary(r.Context(), string(id), from, to, categoryIDs)
+	if err != nil {
+		writeServerError(w)
+		return
+	}
+	if !ok {
+		writeInvalid(w)
+		return
+	}
+	rowDTOs := make([]summaryRowDTO, 0, len(rows))
+	for _, row := range rows {
+		rowDTOs = append(rowDTOs, summaryRowDTO{
+			CategoryID:   row.CategoryID,
+			CategoryName: row.CategoryName,
+			ParentName:   row.ParentName,
+			Total:        row.Total,
+		})
+	}
+	itemDTOs := make([]transactionDTO, 0, len(items))
+	for _, t := range items {
+		itemDTOs = append(itemDTOs, toDTO(t))
+	}
+	writeJSON(w, http.StatusOK, summaryDTO{From: from, To: to, Rows: rowDTOs, Total: total, Items: itemDTOs})
 }
 
 // parseBounded reads a positive query int, falling back to def when absent or
