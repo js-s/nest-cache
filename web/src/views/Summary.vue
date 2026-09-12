@@ -35,10 +35,6 @@ function categoryLabel(row: { category_name: string; parent_name?: string }): st
   return row.parent_name ? `${row.parent_name} → ${row.category_name}` : row.category_name
 }
 
-function itemLabel(t: { category_name: string; parent_name?: string }): string {
-  return t.parent_name ? `${t.parent_name} → ${t.category_name}` : t.category_name
-}
-
 function message(e: unknown): string {
   if (e instanceof ApiError && e.status === 400) return 'Check the dates and categories.'
   return 'Something went wrong. Please try again.'
@@ -55,7 +51,9 @@ async function handle(e: unknown, target: { value: string }): Promise<void> {
 
 function lastDayOfMonth(ym: string): string {
   const [y, m] = ym.split('-').map(Number)
-  return new Date(y, m, 0).toISOString().slice(0, 10)
+  // Calendar day, never UTC: toISOString would shift back a day in CET.
+  const last = new Date(y, m, 0).getDate()
+  return `${ym}-${String(last).padStart(2, '0')}`
 }
 
 function resolveRange(): { from: string; to: string } | null {
@@ -169,7 +167,7 @@ onMounted(async () => {
               <td>{{ r.total }}</td>
             </tr>
             <tr>
-              <td><strong>Altogether</strong></td>
+              <td><strong>Razem</strong></td>
               <td>
                 <strong>{{ data.total }}</strong>
               </td>
@@ -194,7 +192,7 @@ onMounted(async () => {
           <tbody>
             <tr v-for="t in data.items" :key="t.id">
               <td>{{ t.occurred_on }}</td>
-              <td>{{ itemLabel(t) }}</td>
+              <td>{{ categoryLabel(t) }}</td>
               <td>{{ t.description }}</td>
               <td>{{ t.amount }}</td>
             </tr>
