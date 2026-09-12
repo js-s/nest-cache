@@ -137,7 +137,7 @@ func (s *Store) List(ctx context.Context, userID string, page, limit int) ([]Tra
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT t.id, t.kind, t.category_id, c.name, p.name, t.amount::text, t.occurred_on, t.description, t.created_at
 		 FROM transactions t
-		 LEFT JOIN categories c ON c.id = t.category_id
+		 JOIN categories c ON c.id = t.category_id
 		 LEFT JOIN categories p ON p.id = c.parent_id
 		 WHERE t.user_id = $1
 		 ORDER BY t.occurred_on DESC, t.created_at DESC

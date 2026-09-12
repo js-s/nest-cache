@@ -56,7 +56,7 @@ function categoryLabel(t: Transaction): string {
 }
 
 function message(e: unknown): string {
-  if (e instanceof ApiError && e.status === 400) return 'Check the amount and category.'
+  if (e instanceof ApiError && e.status === 400) return 'Check the amount, category, and date.'
   return 'Something went wrong. Please try again.'
 }
 
