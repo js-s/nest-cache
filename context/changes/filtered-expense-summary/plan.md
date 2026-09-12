@@ -182,12 +182,12 @@ Brak migracji. Rollback = revert 1 linii route + stare `Summary.vue` (placeholde
 
 #### Automated
 
-- [x] 2.1 Build frontu przechodzi
-- [x] 2.2 Backend nadal zielony
+- [x] 2.1 Build frontu przechodzi — 7e17b06
+- [x] 2.2 Backend nadal zielony — 7e17b06
 
 #### Manual
 
-- [x] 2.3 US-01: wydatek widoczny w Summary po filtrach
-- [x] 2.4 Presety miesiąc/rok/custom poprawne
-- [x] 2.5 Multi-select i wiersz Razem zgodne
-- [x] 2.6 Pusty miesiąc daje zera + odpowiedź < 2s
+- [x] 2.3 US-01: wydatek widoczny w Summary po filtrach — 7e17b06
+- [x] 2.4 Presety miesiąc/rok/custom poprawne — 7e17b06
+- [x] 2.5 Multi-select i wiersz Razem zgodne — 7e17b06
+- [x] 2.6 Pusty miesiąc daje zera + odpowiedź < 2s — 7e17b06
