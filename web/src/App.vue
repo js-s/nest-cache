@@ -21,6 +21,11 @@ async function logout(): Promise<void> {
   <header class="app-header">
     <div class="page app-header__inner">
       <span class="brand">NestCash</span>
+      <nav v-if="user" class="app-nav">
+        <router-link to="/summary">Summary</router-link>
+        <router-link to="/operations">Operations</router-link>
+        <router-link to="/categories">Categories</router-link>
+      </nav>
       <div class="app-header__user">
         <span v-if="user" class="user-email">{{ user.email }}</span>
         <button type="button" class="btn btn-secondary" @click="toggleTheme">

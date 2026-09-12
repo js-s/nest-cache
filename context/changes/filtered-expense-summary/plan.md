@@ -168,26 +168,26 @@ Brak migracji. Rollback = revert 1 linii route + stare `Summary.vue` (placeholde
 
 #### Automated
 
-- [x] 1.1 Migracje czyste (brak nowych, ale baza startuje)
-- [x] 1.2 Testy store Summary (SUM, filtry, izolacja)
-- [x] 1.3 Testy handlera (200/400/401)
-- [x] 1.4 Cały backend zielony + gofmt pusty
+- [x] 1.1 Migracje czyste (brak nowych, ale baza startuje) — 531e56d
+- [x] 1.2 Testy store Summary (SUM, filtry, izolacja) — 531e56d
+- [x] 1.3 Testy handlera (200/400/401) — 531e56d
+- [x] 1.4 Cały backend zielony + gofmt pusty — 531e56d
 
 #### Manual
 
-- [x] 1.5 curl zwraca sumy zgodne z transactions
-- [x] 1.6 Złe filtry dają 400, brak sesji 401
+- [x] 1.5 curl zwraca sumy zgodne z transactions — 531e56d
+- [x] 1.6 Złe filtry dają 400, brak sesji 401 — 531e56d
 
 ### Phase 2: Ekran podsumowania
 
 #### Automated
 
-- [ ] 2.1 Build frontu przechodzi
-- [ ] 2.2 Backend nadal zielony
+- [x] 2.1 Build frontu przechodzi
+- [x] 2.2 Backend nadal zielony
 
 #### Manual
 
-- [ ] 2.3 US-01: wydatek widoczny w Summary po filtrach
-- [ ] 2.4 Presety miesiąc/rok/custom poprawne
-- [ ] 2.5 Multi-select i wiersz Razem zgodne
-- [ ] 2.6 Pusty miesiąc daje zera + odpowiedź < 2s
+- [x] 2.3 US-01: wydatek widoczny w Summary po filtrach
+- [x] 2.4 Presety miesiąc/rok/custom poprawne
+- [x] 2.5 Multi-select i wiersz Razem zgodne
+- [x] 2.6 Pusty miesiąc daje zera + odpowiedź < 2s

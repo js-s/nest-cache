@@ -111,3 +111,26 @@ export function createTransaction(input: {
 export function listTransactions(page: number, limit = 20): Promise<TransactionPage> {
   return request<TransactionPage>(`/transactions?page=${page}&limit=${limit}`)
 }
+
+export interface SummaryRow {
+  category_id: string
+  category_name: string
+  parent_name?: string
+  total: string
+}
+
+export interface SummaryResponse {
+  from: string
+  to: string
+  rows: SummaryRow[]
+  total: string
+  items: Transaction[]
+}
+
+export function getSummary(from: string, to: string, categoryIds: string[]): Promise<SummaryResponse> {
+  const params = new URLSearchParams({ from, to })
+  if (categoryIds.length) {
+    params.set('category_id', categoryIds.join(','))
+  }
+  return request<SummaryResponse>(`/summary?${params.toString()}`)
+}

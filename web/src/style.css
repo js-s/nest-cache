@@ -150,6 +150,13 @@ a {
   font-weight: 600;
 }
 
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: 0.95rem;
+}
+
 .app-header__user {
   display: flex;
   align-items: center;
