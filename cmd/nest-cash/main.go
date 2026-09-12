@@ -12,13 +12,22 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	"github.com/user/nest-cash/internal/auth"
 	dbmigrate "github.com/user/nest-cash/internal/db"
 )
 
 type application struct {
 	db        *sql.DB
 	staticDir string
+	auth      *auth.Handler
+	resolver  *auth.Resolver
 }
+
+// minSessionSecret is the startup presence gate for auth routes.
+// The opaque scheme stores sha256(token) and signs nothing with the
+// secret today; length-gating keeps the Fly 64-char contract fail-closed
+// for the future HMAC domain separator.
+const minSessionSecret = 32
 
 func main() {
 	port := os.Getenv("PORT")
@@ -50,9 +59,23 @@ func main() {
 		}
 	}
 
+	// Auth wiring: fail-closed when a database is configured — weak or
+	// missing SESSION_SECRET kills boot instead of serving unauthed API.
+	// Without DATABASE_URL the server stays degraded (/healthz only).
+	var authHandler *auth.Handler
+	var authResolver *auth.Resolver
+	if db != nil {
+		if len(os.Getenv("SESSION_SECRET")) < minSessionSecret {
+			log.Fatalf("auth disabled: SESSION_SECRET must be at least %d characters", minSessionSecret)
+		}
+		store := auth.NewStore(db)
+		authResolver = auth.NewResolver(store)
+		authHandler = auth.NewHandler(store, prodSecure())
+	}
+
 	server := &http.Server{
 		Addr:    ":" + port,
-		Handler: (application{db: db, staticDir: staticDir}).routes(),
+		Handler: (application{db: db, staticDir: staticDir, auth: authHandler, resolver: authResolver}).routes(),
 	}
 
 	log.Printf("nest-cash listening on %s", server.Addr)
@@ -93,4 +116,22 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
+}
+
+// prodSecure reports whether Secure cookies are on for non-TLS requests.
+// True on Fly (FLY_APP_NAME) or explicit production env; localhost dev
+// stays false so http:// login works. Per-request TLS always upgrades.
+func prodSecure() bool {
+	if os.Getenv("FLY_APP_NAME") != "" {
+		return true
+	}
+	switch os.Getenv("APP_ENV") {
+	case "production", "prod":
+		return true
+	}
+	switch os.Getenv("GO_ENV") {
+	case "production", "prod":
+		return true
+	}
+	return false
 }

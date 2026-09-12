@@ -6,6 +6,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/user/nest-cash/internal/account"
 )
 
 func (a application) routes() http.Handler {
@@ -16,6 +18,12 @@ func (a application) routes() http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", a.healthz)
+	if a.auth != nil && a.resolver != nil {
+		mux.HandleFunc("POST /api/auth/register", a.auth.Register)
+		mux.HandleFunc("POST /api/auth/login", a.auth.Login)
+		mux.HandleFunc("POST /api/auth/logout", a.auth.Logout)
+		mux.Handle("GET /api/auth/me", account.RequireAccount(a.resolver, http.HandlerFunc(a.auth.Me)))
+	}
 	mux.HandleFunc("/api", a.apiNotFound)
 	mux.Handle("/api/", http.HandlerFunc(a.apiNotFound))
 	mux.Handle("/", newSPAHandler(staticDir))

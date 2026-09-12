@@ -247,9 +247,9 @@ bcrypt cost 12 ~250ms/login — off hot path, fine for personal scale. Session l
 
 #### Automated
 
-- [ ] 2.1 `go test ./internal/auth` passes (bcrypt, token, handler cycle)
-- [ ] 2.2 `go test ./...` passes
-- [ ] 2.3 `go vet ./...` + `gofmt -d` clean
+- [x] 2.1 `go test ./internal/auth` passes (bcrypt, token, handler cycle)
+- [x] 2.2 `go test ./...` passes
+- [x] 2.3 `go vet ./...` + `gofmt -d` clean
 
 #### Manual
 
