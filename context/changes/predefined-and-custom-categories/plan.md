@@ -228,10 +228,10 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Automated
 
-- [x] 2.1 Testy handlera (httptest + RequireAccount): `go test ./internal/categories/...`
-- [x] 2.2 Niezalogowany dostaje 401: pokryte testem
-- [x] 2.3 Użytkownik B nie widzi kategorii A: pokryte testem
-- [x] 2.4 Całość: `go test ./...` i `go vet ./...`
+- [x] 2.1 Testy handlera (httptest + RequireAccount): `go test ./internal/categories/...` — edcb778
+- [x] 2.2 Niezalogowany dostaje 401: pokryte testem — edcb778
+- [x] 2.3 Użytkownik B nie widzi kategorii A: pokryte testem — edcb778
+- [x] 2.4 Całość: `go test ./...` i `go vet ./...` — edcb778
 
 #### Manual
 
@@ -242,8 +242,8 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Automated
 
-- [ ] 3.1 Budowanie frontendu: `npm --prefix web run build`
-- [ ] 3.2 Brak nowych błędów TypeScript (`vue-tsc` w build)
+- [x] 3.1 Budowanie frontendu: `npm --prefix web run build`
+- [x] 3.2 Brak nowych błędów TypeScript (`vue-tsc` w build)
 
 #### Manual
 

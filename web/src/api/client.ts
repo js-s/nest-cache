@@ -54,3 +54,26 @@ export function logout(): Promise<void> {
 export function me(): Promise<Profile> {
   return request<Profile>('/auth/me')
 }
+
+export interface CategoryChild {
+  id: string
+  name: string
+}
+
+export interface CategoryGroup {
+  id: string
+  kind: 'expense' | 'income'
+  name: string
+  children: CategoryChild[]
+}
+
+export function listCategories(): Promise<CategoryGroup[]> {
+  return request<CategoryGroup[]>('/categories')
+}
+
+export function createCategory(input: { kind: string; name: string; parent_id?: string }): Promise<unknown> {
+  return request<unknown>('/categories', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
