@@ -1,0 +1,52 @@
+wydatki:
+  mieszkanie:
+    - Dom i remonty
+    - Media i opłaty
+    - Ubezpieczenie mieszkania
+
+  codzienne:
+    - Artykuły spożywcze
+    - Chemia gospodarcza
+    - Restauracje i jedzenie na mieście
+
+  rodzina:
+    - Przedszkole
+    - Szkoła
+    - Edukacja
+    - Ubrania
+    - Prezenty
+
+  transport:
+    - Paliwo
+    - Komunikacja miejska
+    - Serwis samochodu
+    - Ubezpieczenie samochodu
+
+  zdrowie:
+    - Leki
+    - Wizyty lekarskie
+
+  finanse:
+    - Kredyty
+    - Oszczędności
+    - Inwestycje
+
+  technologia:
+    - Elektronika i komputery
+    - Narzędzia
+
+  styl_zycia:
+    - Wakacje
+    - Rozrywka
+    - Sport i hobby
+
+  pozostale:
+    - Zwierzęta
+    - Inne
+
+przychody:
+  - Wynagrodzenie
+  - Premie
+  - Dodatkowe dochody
+  - Zwrot podatku
+  - Odsetki i zyski z inwestycji

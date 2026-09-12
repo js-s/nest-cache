@@ -37,15 +37,23 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <main>
-    <h1>Log in</h1>
-    <form @submit.prevent="submit">
-      <label>Email <input v-model="email" type="email" autocomplete="email" required /></label>
-      <label>Password <input v-model="password" type="password" autocomplete="current-password" required minlength="8" /></label>
-      <p v-if="error" role="alert">{{ error }}</p>
-      <button type="submit" :disabled="busy || !valid()">Log in</button>
-    </form>
-    <p>No account yet? <router-link to="/register">Register</router-link></p>
-    <p>Password reset is coming in v2 — for now, keep your password safe.</p>
-  </main>
+  <div class="auth">
+    <div class="card stack">
+      <h1>Log in</h1>
+      <form class="stack" @submit.prevent="submit">
+        <label class="field">
+          <span>Email</span>
+          <input v-model="email" type="email" autocomplete="email" required />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input v-model="password" type="password" autocomplete="current-password" required minlength="8" />
+        </label>
+        <p v-if="error" class="alert alert-error" role="alert">{{ error }}</p>
+        <button type="submit" class="btn btn-primary" :disabled="busy || !valid()">Log in</button>
+      </form>
+      <p class="muted">No account yet? <router-link to="/register">Register</router-link></p>
+      <p class="muted">Password reset is coming in v2 — for now, keep your password safe.</p>
+    </div>
+  </div>
 </template>
