@@ -58,7 +58,7 @@ func isConflict(err error) bool {
 // Flat income seeds come back as groups without children.
 func (s *Store) List(ctx context.Context, userID string) ([]Group, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, parent_id, kind, name FROM categories WHERE user_id = $1 ORDER BY kind, name`,
+		`SELECT id, parent_id, kind, name FROM categories WHERE user_id = $1 ORDER BY kind, parent_id NULLS FIRST, name`,
 		userID,
 	)
 	if err != nil {
@@ -67,7 +67,7 @@ func (s *Store) List(ctx context.Context, userID string) ([]Group, error) {
 	defer rows.Close()
 
 	groups := []Group{}
-	byID := map[string]*Group{}
+	byIdx := map[string]int{}
 	for rows.Next() {
 		var id, kind, name string
 		var parentID sql.NullString
@@ -75,13 +75,12 @@ func (s *Store) List(ctx context.Context, userID string) ([]Group, error) {
 			return nil, fmt.Errorf("categories: list scan: %w", err)
 		}
 		if !parentID.Valid {
-			g := Group{ID: id, Kind: kind, Name: name}
-			groups = append(groups, g)
-			byID[id] = &groups[len(groups)-1]
+			byIdx[id] = len(groups)
+			groups = append(groups, Group{ID: id, Kind: kind, Name: name})
 			continue
 		}
-		if g, ok := byID[parentID.String]; ok {
-			g.Children = append(g.Children, Subcategory{ID: id, Name: name})
+		if idx, ok := byIdx[parentID.String]; ok {
+			groups[idx].Children = append(groups[idx].Children, Subcategory{ID: id, Name: name})
 		}
 		// ponytail: orphan child (parent filtered out) dropped; FK cascade makes this unreachable.
 	}

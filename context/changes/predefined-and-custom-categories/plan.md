@@ -214,10 +214,10 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Automated
 
-- [x] 1.1 Migracja nakłada się czysto: `go test ./internal/db/...`
-- [x] 1.2 Testy pakietu przechodzą: `go test ./internal/categories/...`
-- [x] 1.3 Cały backend zielony: `go test ./...`
-- [x] 1.4 Formatowanie: `gofmt -l internal/categories cmd`
+- [x] 1.1 Migracja nakłada się czysto: `go test ./internal/db/...` — 48a63b5
+- [x] 1.2 Testy pakietu przechodzą: `go test ./internal/categories/...` — 48a63b5
+- [x] 1.3 Cały backend zielony: `go test ./...` — 48a63b5
+- [x] 1.4 Formatowanie: `gofmt -l internal/categories cmd` — 48a63b5
 
 #### Manual
 
@@ -228,10 +228,10 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Automated
 
-- [ ] 2.1 Testy handlera (httptest + RequireAccount): `go test ./internal/categories/...`
-- [ ] 2.2 Niezalogowany dostaje 401: pokryte testem
-- [ ] 2.3 Użytkownik B nie widzi kategorii A: pokryte testem
-- [ ] 2.4 Całość: `go test ./...` i `go vet ./...`
+- [x] 2.1 Testy handlera (httptest + RequireAccount): `go test ./internal/categories/...`
+- [x] 2.2 Niezalogowany dostaje 401: pokryte testem
+- [x] 2.3 Użytkownik B nie widzi kategorii A: pokryte testem
+- [x] 2.4 Całość: `go test ./...` i `go vet ./...`
 
 #### Manual
 

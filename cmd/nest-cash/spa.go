@@ -24,6 +24,10 @@ func (a application) routes() http.Handler {
 		mux.HandleFunc("POST /api/auth/logout", a.auth.Logout)
 		mux.Handle("GET /api/auth/me", account.RequireAccount(a.resolver, http.HandlerFunc(a.auth.Me)))
 	}
+	if a.categories != nil && a.resolver != nil {
+		mux.Handle("GET /api/categories", account.RequireAccount(a.resolver, http.HandlerFunc(a.categories.List)))
+		mux.Handle("POST /api/categories", account.RequireAccount(a.resolver, http.HandlerFunc(a.categories.Create)))
+	}
 	mux.HandleFunc("/api", a.apiNotFound)
 	mux.Handle("/api/", http.HandlerFunc(a.apiNotFound))
 	mux.Handle("/", newSPAHandler(staticDir))

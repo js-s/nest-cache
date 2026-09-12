@@ -13,14 +13,16 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/user/nest-cash/internal/auth"
+	"github.com/user/nest-cash/internal/categories"
 	dbmigrate "github.com/user/nest-cash/internal/db"
 )
 
 type application struct {
-	db        *sql.DB
-	staticDir string
-	auth      *auth.Handler
-	resolver  *auth.Resolver
+	db         *sql.DB
+	staticDir  string
+	auth       *auth.Handler
+	resolver   *auth.Resolver
+	categories *categories.Handler
 }
 
 // minSessionSecret is the startup presence gate for auth routes.
@@ -64,6 +66,7 @@ func main() {
 	// Without DATABASE_URL the server stays degraded (/healthz only).
 	var authHandler *auth.Handler
 	var authResolver *auth.Resolver
+	var categoriesHandler *categories.Handler
 	if db != nil {
 		if len(os.Getenv("SESSION_SECRET")) < minSessionSecret {
 			log.Fatalf("auth disabled: SESSION_SECRET must be at least %d characters", minSessionSecret)
@@ -71,12 +74,13 @@ func main() {
 		store := auth.NewStore(db)
 		authResolver = auth.NewResolver(store)
 		authHandler = auth.NewHandler(store, prodSecure())
+		categoriesHandler = categories.NewHandler(categories.NewStore(db))
 		go purgeExpiredSessions(store)
 	}
 
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           (application{db: db, staticDir: staticDir, auth: authHandler, resolver: authResolver}).routes(),
+		Handler:           (application{db: db, staticDir: staticDir, auth: authHandler, resolver: authResolver, categories: categoriesHandler}).routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
