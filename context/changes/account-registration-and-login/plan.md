@@ -247,9 +247,9 @@ bcrypt cost 12 ~250ms/login — off hot path, fine for personal scale. Session l
 
 #### Automated
 
-- [x] 2.1 `go test ./internal/auth` passes (bcrypt, token, handler cycle)
-- [x] 2.2 `go test ./...` passes
-- [x] 2.3 `go vet ./...` + `gofmt -d` clean
+- [x] 2.1 `go test ./internal/auth` passes (bcrypt, token, handler cycle) — f131314
+- [x] 2.2 `go test ./...` passes — f131314
+- [x] 2.3 `go vet ./...` + `gofmt -d` clean — f131314
 
 #### Manual
 
@@ -261,10 +261,10 @@ bcrypt cost 12 ~250ms/login — off hot path, fine for personal scale. Session l
 
 #### Automated
 
-- [ ] 3.1 `npm --prefix web run build` passes
+- [x] 3.1 `npm --prefix web run build` passes
 
 #### Manual
 
-- [ ] 3.2 Register→reload→logout→guard redirect works
-- [ ] 3.3 Generic bad-credential error, no oracle
-- [ ] 3.4 Dev proxy and built SPA serve both work
+- [x] 3.2 Register→reload→logout→guard redirect works
+- [x] 3.3 Generic bad-credential error, no oracle
+- [x] 3.4 Dev proxy and built SPA serve both work
