@@ -19,7 +19,7 @@ NestCash is a single-user personal budget tracker in one repository: a Go 1.22.2
 
 ## Build, test, and development commands
 
-- `go test ./...` — run all backend tests.
+- `go test ./...` — run all backend tests. On macOS, if test binaries abort with `dyld: missing LC_UUID load command`, retry with `CGO_ENABLED=0 go test ./...` (known local toolchain quirk, unrelated to the code).
 - `go run ./cmd/nest-cash` — run the local API; it uses `PORT` and optionally `DATABASE_URL`.
 - `go build ./...` — compile-check the backend.
 - `npm --prefix web install` — install frontend dependencies from `web/package-lock.json`.
