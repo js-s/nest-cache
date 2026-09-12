@@ -179,3 +179,4 @@ Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych z
 
 - **F-01: (foundation) żądania API mają minimalny kontrakt identyfikowania właściciela danych i odrzucania dostępu do danych spoza jego konta; konkretne przepływy konta i finansów integrują ten kontrakt w kolejnych pionowych przyrostach.** — Archived 2026-09-12 → `context/archive/2026-09-10-account-data-boundary/`. Lesson: —.
 - **S-01: użytkownik może zarejestrować konto i zalogować się w interfejsie webowym przez email i hasło oraz korzystać z długiej sesji.** — Archived 2026-09-12 → `context/archive/2026-09-11-account-registration-and-login/`. Lesson: —.
+- **S-02: użytkownik widzi spójny i czytelny interfejs webowy — panel logowania i rejestracji jest uporządkowany, pola formularzy są większe i wygodniejsze, a układ ekranów jest logiczny zamiast surowy.** — Archived 2026-09-12 → `context/archive/2026-09-12-web-ui-styling/`. Lesson: —.
