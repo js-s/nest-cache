@@ -276,13 +276,13 @@ Nowa, wyłącznie dodająca migracja `0004_transactions.sql`; brak zmian w istni
 
 #### Automated
 
-- [x] 3.1 Build + typecheck przechodzą: `npm --prefix web run build`
+- [x] 3.1 Build + typecheck przechodzą: `npm --prefix web run build` — 7d147f0
 
 #### Manual
 
-- [x] 3.2 `/operations` pokazuje formularz i listę po zalogowaniu.
-- [x] 3.3 Zapis wydatku natychmiast pokazuje go na górze; po odświeżeniu nadal jest.
-- [x] 3.4 „Wczytaj więcej” dociąga kolejną stronę bez duplikatów.
-- [x] 3.5 Wybrana kategoria domyślnie ustawiona przy kolejnym wejściu (localStorage).
-- [x] 3.6 Konto B nie widzi operacji konta A.
-- [x] 3.7 Brak kategorii wydatków → formularz zablokowany z odnośnikiem do `/categories`.
+- [x] 3.2 `/operations` pokazuje formularz i listę po zalogowaniu. — 7d147f0
+- [x] 3.3 Zapis wydatku natychmiast pokazuje go na górze; po odświeżeniu nadal jest. — 7d147f0
+- [x] 3.4 „Wczytaj więcej” dociąga kolejną stronę bez duplikatów. — 7d147f0
+- [x] 3.5 Wybrana kategoria domyślnie ustawiona przy kolejnym wejściu (localStorage). — 7d147f0
+- [x] 3.6 Konto B nie widzi operacji konta A. — 7d147f0
+- [x] 3.7 Brak kategorii wydatków → formularz zablokowany z odnośnikiem do `/categories`. — 7d147f0

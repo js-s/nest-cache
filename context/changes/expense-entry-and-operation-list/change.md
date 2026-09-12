@@ -1,7 +1,7 @@
 ---
 change_id: expense-entry-and-operation-list
 title: Expense entry and operation list
-status: impl_reviewed
+status: implemented
 created: 2026-09-12
 updated: 2026-09-12
 archived_at: null
