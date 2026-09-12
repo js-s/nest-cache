@@ -77,3 +77,37 @@ export function createCategory(input: { kind: string; name: string; parent_id?: 
     body: JSON.stringify(input),
   })
 }
+
+export interface Transaction {
+  id: string
+  amount: string
+  kind: 'expense' | 'income'
+  category_id: string
+  category_name: string
+  parent_name?: string
+  occurred_on: string
+  description: string
+}
+
+export interface TransactionPage {
+  items: Transaction[]
+  page: number
+  limit: number
+  total: number
+}
+
+export function createTransaction(input: {
+  amount: string
+  category_id: string
+  occurred_on: string
+  description?: string
+}): Promise<Transaction> {
+  return request<Transaction>('/transactions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function listTransactions(page: number, limit = 20): Promise<TransactionPage> {
+  return request<TransactionPage>(`/transactions?page=${page}&limit=${limit}`)
+}

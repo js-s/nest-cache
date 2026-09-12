@@ -262,27 +262,27 @@ Nowa, wyłącznie dodająca migracja `0004_transactions.sql`; brak zmian w istni
 
 #### Automated
 
-- [x] 2.1 Kompilacja: `go build ./...`
-- [x] 2.2 Testy handlerów przechodzą: `DATABASE_URL=... go test ./internal/transactions/...`
-- [x] 2.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...`
+- [x] 2.1 Kompilacja: `go build ./...` — 9ed8e24
+- [x] 2.2 Testy handlerów przechodzą: `DATABASE_URL=... go test ./internal/transactions/...` — 9ed8e24
+- [x] 2.3 Testy całości przechodzą: `DATABASE_URL=... go test ./...` — 9ed8e24
 
 #### Manual
 
-- [ ] 2.4 `curl` bez ciasteczka → 401; z sesją poprawny `POST` → 201 i wiersz w `GET`.
-- [ ] 2.5 `POST` z obcą kategoria/`kind=income` → 400; `amount` ≤ 0 lub poza formatem → 400.
-- [ ] 2.6 `GET ?page=1&limit=2` zwraca ≤ 2 elementy i poprawne `total`.
+- [x] 2.4 `curl` bez ciasteczka → 401; z sesją poprawny `POST` → 201 i wiersz w `GET`. — 9ed8e24
+- [x] 2.5 `POST` z obcą kategoria/`kind=income` → 400; `amount` ≤ 0 lub poza formatem → 400. — 9ed8e24
+- [x] 2.6 `GET ?page=1&limit=2` zwraca ≤ 2 elementy i poprawne `total`. — 9ed8e24
 
 ### Phase 3: Frontend
 
 #### Automated
 
-- [ ] 3.1 Build + typecheck przechodzą: `npm --prefix web run build`
+- [x] 3.1 Build + typecheck przechodzą: `npm --prefix web run build`
 
 #### Manual
 
-- [ ] 3.2 `/operations` pokazuje formularz i listę po zalogowaniu.
-- [ ] 3.3 Zapis wydatku natychmiast pokazuje go na górze; po odświeżeniu nadal jest.
-- [ ] 3.4 „Wczytaj więcej” dociąga kolejną stronę bez duplikatów.
-- [ ] 3.5 Wybrana kategoria domyślnie ustawiona przy kolejnym wejściu (localStorage).
-- [ ] 3.6 Konto B nie widzi operacji konta A.
-- [ ] 3.7 Brak kategorii wydatków → formularz zablokowany z odnośnikiem do `/categories`.
+- [x] 3.2 `/operations` pokazuje formularz i listę po zalogowaniu.
+- [x] 3.3 Zapis wydatku natychmiast pokazuje go na górze; po odświeżeniu nadal jest.
+- [x] 3.4 „Wczytaj więcej” dociąga kolejną stronę bez duplikatów.
+- [x] 3.5 Wybrana kategoria domyślnie ustawiona przy kolejnym wejściu (localStorage).
+- [x] 3.6 Konto B nie widzi operacji konta A.
+- [x] 3.7 Brak kategorii wydatków → formularz zablokowany z odnośnikiem do `/categories`.

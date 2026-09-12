@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { ensureSession } from './auth'
 import Categories from './views/Categories.vue'
 import Login from './views/Login.vue'
+import Operations from './views/Operations.vue'
 import Register from './views/Register.vue'
 import Summary from './views/Summary.vue'
 
@@ -13,6 +14,7 @@ const router = createRouter({
     { path: '/register', component: Register },
     { path: '/summary', component: Summary, meta: { requiresAuth: true } },
     { path: '/categories', component: Categories, meta: { requiresAuth: true } },
+    { path: '/operations', component: Operations, meta: { requiresAuth: true } },
     // Unknown paths funnel through / (→ /summary, itself auth-guarded),
     // so guests land on /login and signed-in users on /summary.
     { path: '/:pathMatch(.*)*', redirect: '/' },
