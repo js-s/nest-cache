@@ -11,7 +11,10 @@ import {
 } from '../api/client'
 
 const LIMIT = 20
-const LAST_CATEGORY_KEY = 'nestcash:last-category'
+const LAST_CATEGORY_BASE = 'nestcash:last-category'
+
+type EntryKind = 'expense' | 'income'
+type ListKind = 'all' | EntryKind
 
 const router = useRouter()
 
@@ -27,18 +30,20 @@ const loadError = ref('')
 const formError = ref('')
 const listError = ref('')
 
+const kind = ref<EntryKind>('expense')
+const listKind = ref<ListKind>('all')
 const categoryId = ref('')
 const amount = ref('')
 const occurredOn = ref(new Date().toISOString().slice(0, 10))
 const description = ref('')
 
-const expenseGroups = computed(() => groups.value.filter((g) => g.kind === 'expense'))
+const kindGroups = computed(() => groups.value.filter((g) => g.kind === kind.value))
 
-// Selectable expense ids: groups with no children act as a leaf; otherwise
-// each child is selectable. Income groups are skipped entirely.
+// Selectable ids: groups with no children act as a leaf; otherwise
+// each child is selectable. Applies to both expense hierarchy and flat income groups.
 const categoryIds = computed(() => {
   const ids = new Set<string>()
-  for (const g of expenseGroups.value) {
+  for (const g of kindGroups.value) {
     if (g.children.length) {
       for (const c of g.children) ids.add(c.id)
     } else {
@@ -48,8 +53,12 @@ const categoryIds = computed(() => {
   return ids
 })
 
-const hasExpenseCategories = computed(() => categoryIds.value.size > 0)
+const hasCategories = computed(() => categoryIds.value.size > 0)
 const hasMore = computed(() => items.value.length < total.value)
+
+function lastKey(k: EntryKind): string {
+  return `${LAST_CATEGORY_BASE}:${k}`
+}
 
 function categoryLabel(t: Transaction): string {
   return t.parent_name ? `${t.parent_name} → ${t.category_name}` : t.category_name
@@ -73,7 +82,7 @@ async function loadFirstPage(): Promise<void> {
   listError.value = ''
   loading.value = true
   try {
-    const res = await listTransactions(1, LIMIT)
+    const res = await listTransactions(1, LIMIT, listKind.value)
     items.value = res.items
     page.value = res.page
     total.value = res.total
@@ -88,7 +97,7 @@ async function loadMore(): Promise<void> {
   listError.value = ''
   loadingMore.value = true
   try {
-    const res = await listTransactions(page.value + 1, LIMIT)
+    const res = await listTransactions(page.value + 1, LIMIT, listKind.value)
     items.value = items.value.concat(res.items)
     page.value = res.page
     total.value = res.total
@@ -101,10 +110,19 @@ async function loadMore(): Promise<void> {
 }
 
 function restoreLastCategory(): void {
-  const saved = localStorage.getItem(LAST_CATEGORY_KEY)
+  const saved = localStorage.getItem(lastKey(kind.value))
   if (saved && categoryIds.value.has(saved)) {
     categoryId.value = saved
   }
+}
+
+// Switching entry kind resets the category: ids from one kind never exist in the other.
+function switchKind(next: EntryKind): void {
+  if (kind.value === next) return
+  kind.value = next
+  categoryId.value = ''
+  formError.value = ''
+  restoreLastCategory()
 }
 
 onMounted(async () => {
@@ -140,8 +158,9 @@ async function submit(): Promise<void> {
       category_id: categoryId.value,
       occurred_on: occurredOn.value,
       description: description.value.trim() || undefined,
+      kind: kind.value,
     })
-    localStorage.setItem(LAST_CATEGORY_KEY, categoryId.value)
+    localStorage.setItem(lastKey(kind.value), categoryId.value)
     amount.value = ''
     description.value = ''
     // ponytail: occurred_on may be older than the newest row, so reload page 1
@@ -161,16 +180,24 @@ async function submit(): Promise<void> {
     <p v-if="loadError" class="alert alert-error" role="alert">{{ loadError }}</p>
 
     <section class="card stack">
-      <h2>Add an expense</h2>
-      <p v-if="!loading && !hasExpenseCategories" class="alert alert-error" role="alert">
-        No expense categories yet. <router-link to="/categories">Manage categories</router-link>.
+      <h2>Add operation</h2>
+      <div class="field" role="radiogroup" aria-label="Type">
+        <label class="check">
+          <input type="radio" :checked="kind === 'expense'" @change="switchKind('expense')" /> Expense
+        </label>
+        <label class="check">
+          <input type="radio" :checked="kind === 'income'" @change="switchKind('income')" /> Income
+        </label>
+      </div>
+      <p v-if="!loading && !hasCategories" class="alert alert-error" role="alert">
+        No {{ kind }} categories yet. <router-link to="/categories">Manage categories</router-link>.
       </p>
       <form class="stack" @submit.prevent="submit">
         <label class="field">
           <span>Category</span>
-          <select v-model="categoryId" :disabled="!hasExpenseCategories">
+          <select v-model="categoryId" :disabled="!hasCategories">
             <option value="" disabled>Select a category…</option>
-            <optgroup v-for="g in expenseGroups" :key="g.id" :label="g.name">
+            <optgroup v-for="g in kindGroups" :key="g.id" :label="g.name">
               <template v-if="g.children.length">
                 <option v-for="c in g.children" :key="c.id" :value="c.id">{{ c.name }}</option>
               </template>
@@ -191,12 +218,20 @@ async function submit(): Promise<void> {
           <input v-model="description" type="text" maxlength="500" />
         </label>
         <p v-if="formError" class="alert alert-error" role="alert">{{ formError }}</p>
-        <button type="submit" class="btn btn-primary" :disabled="busy || !hasExpenseCategories">Save</button>
+        <button type="submit" class="btn btn-primary" :disabled="busy || !hasCategories">Save</button>
       </form>
     </section>
 
     <section class="card stack">
       <h2>Operations</h2>
+      <label class="field">
+        <span>Show</span>
+        <select v-model="listKind" @change="loadFirstPage">
+          <option value="all">All</option>
+          <option value="expense">Expenses</option>
+          <option value="income">Incomes</option>
+        </select>
+      </label>
       <p v-if="loading" class="muted">Loading…</p>
       <template v-else>
         <p v-if="listError" class="alert alert-error" role="alert">{{ listError }}</p>
@@ -205,6 +240,7 @@ async function submit(): Promise<void> {
           <thead>
             <tr>
               <th>Date</th>
+              <th>Type</th>
               <th>Category</th>
               <th>Description</th>
               <th>Amount</th>
@@ -213,6 +249,7 @@ async function submit(): Promise<void> {
           <tbody>
             <tr v-for="t in items" :key="t.id">
               <td>{{ t.occurred_on }}</td>
+              <td>{{ t.kind }}</td>
               <td>{{ categoryLabel(t) }}</td>
               <td>{{ t.description }}</td>
               <td>{{ t.amount }}</td>
@@ -232,3 +269,17 @@ async function submit(): Promise<void> {
     </section>
   </div>
 </template>
+
+<style scoped>
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.check input {
+  width: auto;
+  min-height: auto;
+}
+</style>

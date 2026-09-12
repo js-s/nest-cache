@@ -189,26 +189,26 @@ Brak migracji — `kind` i indeks istnieją od `0004`. Rollback = revert handler
 
 #### Automated
 
-- [x] 1.1 Cały backend zielony
-- [x] 1.2 Testy store Create/List/Summary z kind i ratio
-- [x] 1.3 Testy handlera 200/400/401
-- [x] 1.4 gofmt pusty
+- [x] 1.1 Cały backend zielony — b52595e
+- [x] 1.2 Testy store Create/List/Summary z kind i ratio — b52595e
+- [x] 1.3 Testy handlera 200/400/401 — b52595e
+- [x] 1.4 gofmt pusty — b52595e
 
 #### Manual
 
-- [x] 1.5 curl zapis income + filtry kind działają
-- [x] 1.6 curl summary zwraca budget zgodny z transactions; zero-income daje null; złe inputy 400, brak sesji 401
+- [x] 1.5 curl zapis income + filtry kind działają — b52595e
+- [x] 1.6 curl summary zwraca budget zgodny z transactions; zero-income daje null; złe inputy 400, brak sesji 401 — b52595e
 
 ### Phase 2: UI przychodów i wskaźnika
 
 #### Automated
 
-- [ ] 2.1 Build frontu przechodzi
-- [ ] 2.2 Backend nadal zielony
+- [x] 2.1 Build frontu przechodzi
+- [x] 2.2 Backend nadal zielony
 
 #### Manual
 
-- [ ] 2.3 Toggle zapisuje przychód, lista z Rodzaj i filtrem kind
-- [ ] 2.4 Badge zielony/żółty/czerwony na seedowanych okresach
-- [ ] 2.5 Zero przychodów daje myślnik + hint; multi-select nie rusza ratio
-- [ ] 2.6 Odpowiedź < 2s + izolacja drugiego usera
+- [x] 2.3 Toggle zapisuje przychód, lista z Rodzaj i filtrem kind
+- [x] 2.4 Badge zielony/żółty/czerwony na seedowanych okresach
+- [x] 2.5 Zero przychodów daje myślnik + hint; multi-select nie rusza ratio
+- [x] 2.6 Odpowiedź < 2s + izolacja drugiego usera

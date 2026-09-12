@@ -101,6 +101,7 @@ export function createTransaction(input: {
   category_id: string
   occurred_on: string
   description?: string
+  kind?: 'expense' | 'income'
 }): Promise<Transaction> {
   return request<Transaction>('/transactions', {
     method: 'POST',
@@ -108,8 +109,16 @@ export function createTransaction(input: {
   })
 }
 
-export function listTransactions(page: number, limit = 20): Promise<TransactionPage> {
-  return request<TransactionPage>(`/transactions?page=${page}&limit=${limit}`)
+export function listTransactions(
+  page: number,
+  limit = 20,
+  kind: 'all' | 'expense' | 'income' = 'all',
+): Promise<TransactionPage> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (kind !== 'all') {
+    params.set('kind', kind)
+  }
+  return request<TransactionPage>(`/transactions?${params.toString()}`)
 }
 
 export interface SummaryRow {
@@ -119,12 +128,19 @@ export interface SummaryRow {
   total: string
 }
 
+export interface Budget {
+  expense_total: string
+  income_total: string
+  ratio_pct: string | null
+}
+
 export interface SummaryResponse {
   from: string
   to: string
   rows: SummaryRow[]
   total: string
   items: Transaction[]
+  budget: Budget
 }
 
 export function getSummary(from: string, to: string, categoryIds: string[]): Promise<SummaryResponse> {

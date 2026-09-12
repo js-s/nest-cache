@@ -31,6 +31,20 @@ const data = ref<SummaryResponse | null>(null)
 
 const expenseGroups = computed(() => groups.value.filter((g) => g.kind === 'expense'))
 
+type BudgetState = 'empty' | 'ok' | 'warn' | 'over'
+
+// Budget badge reads the whole-period ratio, never the category-filtered table.
+// ratio_pct is a display string; Number() is only for threshold colors.
+const budgetState = computed<BudgetState>(() => {
+  const ratio = data.value?.budget.ratio_pct
+  if (ratio === undefined || ratio === null) return 'empty'
+  const n = Number(ratio)
+  if (Number.isNaN(n)) return 'empty'
+  if (n >= 100) return 'over'
+  if (n >= 80) return 'warn'
+  return 'ok'
+})
+
 function categoryLabel(row: { category_name: string; parent_name?: string }): string {
   return row.parent_name ? `${row.parent_name} → ${row.category_name}` : row.category_name
 }
@@ -150,6 +164,24 @@ onMounted(async () => {
     </section>
 
     <section class="card stack">
+      <h2>Period budget</h2>
+      <p v-if="fetching" class="muted">Loading…</p>
+      <template v-else-if="data">
+        <p class="muted">Expenses {{ data.budget.expense_total }} / Income {{ data.budget.income_total }}</p>
+        <p v-if="budgetState === 'empty'" class="muted">Ratio —. No income in this period.</p>
+        <p v-else-if="budgetState === 'ok'" class="badge badge-ok" role="status">
+          {{ data.budget.ratio_pct }}%
+        </p>
+        <p v-else-if="budgetState === 'warn'" class="badge badge-warn" role="status">
+          {{ data.budget.ratio_pct }}% — Approaching the limit
+        </p>
+        <p v-else class="badge badge-over" role="status">
+          {{ data.budget.ratio_pct }}% — Expenses exceed income
+        </p>
+      </template>
+    </section>
+
+    <section class="card stack">
       <h2>Totals by category</h2>
       <p v-if="fetching" class="muted">Loading…</p>
       <template v-else-if="data">
@@ -222,5 +254,27 @@ fieldset {
   border: 0;
   padding: 0;
   margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.badge-ok {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.badge-warn {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+.badge-over {
+  background: #fce8e6;
+  color: #a50e0e;
 }
 </style>
