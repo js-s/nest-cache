@@ -31,7 +31,7 @@ Domowy budżet ginie w rozproszonych arkuszach i plikach tekstowych bez spójneg
 
 | ID | Change ID | Outcome (user can …) | Prerequisites | PRD refs | Status |
 |---|---|---|---|---|---|
-| F-01 | account-data-boundary | (foundation) żądania API mają minimalny kontrakt identyfikowania właściciela danych i odrzucania dostępu do danych spoza jego konta; konkretne przepływy konta i finansów integrują ten kontrakt w kolejnych pionowych przyrostach. | — | Access Control, NFR (privacy), NFR (retention) | ready |
+| F-01 | account-data-boundary | (foundation) żądania API mają minimalny kontrakt identyfikowania właściciela danych i odrzucania dostępu do danych spoza jego konta; konkretne przepływy konta i finansów integrują ten kontrakt w kolejnych pionowych przyrostach. | — | Access Control, NFR (privacy), NFR (retention) | done |
 | S-01 | account-registration-and-login | użytkownik może zarejestrować konto i zalogować się w interfejsie webowym przez email i hasło oraz korzystać z długiej sesji. | F-01 | FR-001, FR-002, Access Control | blocked |
 | S-02 | web-ui-styling | użytkownik widzi spójny, schludny interfejs webowy: uporządkowany panel logowania i rejestracji, większe pola formularzy i logiczny układ ekranów. | — | FR-001, FR-002, NFR (cross-browser) | done |
 | S-03 | predefined-and-custom-categories | użytkownik może zobaczyć w interfejsie webowym predefiniowane kategorie i podkategorie przy pierwszym użyciu i utworzyć własne kategorie oraz podkategorie wydatków lub przychodów. | S-01 | FR-003 | proposed |
@@ -177,4 +177,4 @@ Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych z
 
 ## Done
 
-(Puste przy pierwszym wygenerowaniu. `/10x-archive` dopisuje tu zarchiwizowane elementy i zmienia ich status na `done`.)
+- **F-01: (foundation) żądania API mają minimalny kontrakt identyfikowania właściciela danych i odrzucania dostępu do danych spoza jego konta; konkretne przepływy konta i finansów integrują ten kontrakt w kolejnych pionowych przyrostach.** — Archived 2026-09-12 → `context/archive/2026-09-10-account-data-boundary/`. Lesson: —.

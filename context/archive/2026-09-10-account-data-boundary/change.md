@@ -1,10 +1,10 @@
 ---
 change_id: account-data-boundary
 title: Ustanowić minimalną granicę własności danych
-status: impl_reviewed
+status: archived
 created: 2026-09-10
-updated: 2026-09-11
-archived_at: null
+updated: 2026-09-12
+archived_at: 2026-09-12T12:33:15Z
 ---
 
 ## Notes
