@@ -221,8 +221,8 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Manual
 
-- [ ] 1.5 Podgląd SQL po migracji pokazuje tabelę `categories`
-- [ ] 1.6 Plik YAML ładuje się bez błędu (ręczny test seed na lokalnej bazie)
+- [x] 1.5 Podgląd SQL po migracji pokazuje tabelę `categories`
+- [x] 1.6 Plik YAML ładuje się bez błędu (ręczny test seed na lokalnej bazie)
 
 ### Phase 2: API kategorii
 
@@ -235,19 +235,19 @@ Migracja `0003` tylko dodaje tabelę — istniejące konta (users/sessions) niet
 
 #### Manual
 
-- [ ] 2.5 `curl` z ciasteczkiem: GET zwraca grupy z YAML, POST dodaje własną, duplikat zwraca 409 z polskim komunikatem na ekranie w Fazie 3
-- [ ] 2.6 Bez ciasteczka: 401
+- [x] 2.5 `curl` z ciasteczkiem: GET zwraca grupy z YAML, POST dodaje własną, duplikat zwraca 409 z polskim komunikatem na ekranie w Fazie 3
+- [x] 2.6 Bez ciasteczka: 401
 
 ### Phase 3: Ekran Kategorie w przeglądarce
 
 #### Automated
 
-- [x] 3.1 Budowanie frontendu: `npm --prefix web run build`
-- [x] 3.2 Brak nowych błędów TypeScript (`vue-tsc` w build)
+- [x] 3.1 Budowanie frontendu: `npm --prefix web run build` — aedb16c
+- [x] 3.2 Brak nowych błędów TypeScript (`vue-tsc` w build) — aedb16c
 
 #### Manual
 
-- [ ] 3.3 Po zalogowaniu `/categories` pokazuje startowe grupy z YAML
-- [ ] 3.4 Dodanie własnej grupy i podkategorii działa i widać je po odświeżeniu (F5)
-- [ ] 3.5 Pusta nazwa i duplikat pokazują czerwony komunikat, wpisana treść nie znika
-- [ ] 3.6 Niezalogowany wchodzi na `/categories` → ląduje na `/login`
+- [x] 3.3 Po zalogowaniu `/categories` pokazuje startowe grupy z YAML
+- [x] 3.4 Dodanie własnej grupy i podkategorii działa i widać je po odświeżeniu (F5)
+- [x] 3.5 Pusta nazwa i duplikat pokazują czerwony komunikat, wpisana treść nie znika
+- [x] 3.6 Niezalogowany wchodzi na `/categories` → ląduje na `/login`

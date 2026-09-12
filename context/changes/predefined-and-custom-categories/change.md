@@ -1,7 +1,7 @@
 ---
 change_id: predefined-and-custom-categories
 title: Predefined and custom categories
-status: implementing
+status: implemented
 created: 2026-09-12
 updated: 2026-09-12
 archived_at: null
