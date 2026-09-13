@@ -42,15 +42,17 @@ research's job, see §1 principle #3).
 | 1 | One account reads or writes another account's transactions or categories through the API | High | Medium | PRD privacy NFR L83, Access Control L105; roadmap F-01 L67; interview Q1 |
 | 2 | Combined period+category summary returns the wrong subset or totals — a real expense is missing from the table | High | High | US-01 AC L49–51, FR-009 L78; roadmap S-05 risk L133; hot-spot `web/src` (43 commits/30d) + `internal/transactions` (19) |
 | 3 | Budget ratio or the 80% passive signal is miscalculated or shown at the wrong time | Medium | Medium | PRD Business Logic L89–97; roadmap S-06 L145 |
-| 4 | Invalid input is accepted (amount ≤ 0, nonexistent category, malformed filter) → corrupt data, wrong summary, or a 500 | High | Medium | PRD validation L101; roadmap S-04 risk L120; abuse lens (untrusted input) |
+| 4 | Invalid input is accepted (amount ≤ 0, nonexistent category, semantically invalid filter) → corrupt data, wrong summary, or a 500 | High | Medium | PRD validation L101; roadmap S-04 risk L120; abuse lens (untrusted input) |
 | 5 | Backend JSON contract drifts from the Vue client and a flow breaks silently at runtime | Medium | Medium | test-base profile (frontend `none`); hot-spot `web/src/api/client.ts` (5); tech-stack-web.md |
 | 6 | A protected route is served unauthenticated, or a long-lived session drops unexpectedly | High | Low | FR-002 L59; privacy NFR L38; hot-spot `internal/auth` (15) |
 | 7 | A saved transaction does not persist and is lost after re-login | Medium | Low | PRD Secondary success criterion L34; retention NFR L85 |
 
 Abuse / security lens: Risk #1 covers authorization / IDOR (does the
 endpoint verify ownership, not just authentication?). Risk #4 covers
-untrusted input and server-side validation parity, including malformed
-filter parameters. Both are scored on the same impact × likelihood axes.
+untrusted input and server-side validation parity, including semantically invalid
+filter parameters (bad `kind`, bad/`from>to` dates, foreign/unknown/income category).
+`page`/`limit` are lenient by design (malformed values fall back to defaults, not a 400)
+and over-long `description` is truncated, not rejected. Both are scored on the same impact × likelihood axes.
 
 ### Risk Response Guidance
 
@@ -59,7 +61,7 @@ filter parameters. Both are scored on the same impact × likelihood axes.
 | #1 | Account A's request referencing Account B's resource returns no B data and mutates nothing | "Being logged in implies ownership is checked" | Where owner identity comes from; how resource ids resolve; whether isolation is enforced at handler or store | integration (HTTP) | Asserting only that a request succeeded; sharing one fixture owner across cases |
 | #2 | A known set of transactions appears — and only those — under combined period+category filters, with matching totals | "An empty result means no matching data"; "dates filter inclusively because the code says so" | Date-boundary inclusivity from requirements; timezone of the date filter; pagination interaction with filters | integration / store-level | Oracle lifted from the SQL under test; happy-path-only |
 | #3 | Ratio = expenses/income for a chosen period; ≥ 80% shows the indicator, < 80% does not | "The ratio is right because the code computes it that way" | Rounding and precision; zero-income division; threshold boundary exactly at 80% | unit / integration | Assertion copied from the production formula; ignoring divide-by-zero |
-| #4 | Bad amount / category / filter is rejected with 400 and writes nothing; valid input is accepted | "Client-side validation is enough" | Server-side validation as source of truth; existing error mapping; category-must-exist rule | integration (HTTP) | Testing only the happy path; asserting internal error strings |
+| #4 | Bad amount / category / semantically invalid filter (bad `kind`, bad/`from>to` dates, foreign/unknown/income category) is rejected with 400 and writes nothing; valid input is accepted. `page`/`limit` are lenient by design and over-long `description` is truncated, neither a 400 | "Client-side validation is enough" | Server-side validation as source of truth; existing error mapping; category-must-exist rule | integration (HTTP) | Testing only the happy path; asserting internal error strings |
 | #5 | A real user flow works against the actual backend response shape | "Build passing means the contract is fine" | Exact JSON field names and shape the client consumes; API base URL wiring | contract + one flow | Snapshotting markup; testing framework internals |
 | #6 | An unauthenticated request to a protected route is rejected and leaks nothing | "The login page rendering proves auth works" | Which routes sit behind the middleware; the session cookie contract | integration (HTTP) | Only testing the login form UI |
 | #7 | Two sessions of the same account both see a transaction created in the first | "An in-memory test store proves persistence" | Whether tests use the real store or a mock; migration/connection setup | integration against DB | Passing against a mock store that hides persistence bugs |
@@ -72,7 +74,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|------------|-----------------|----------------|------------|--------|---------------|
-| 1 | Account isolation & validation hardening | Prove each account only reaches its own data, and that bad input cannot write | #1, #4, #6 | integration (HTTP) | change opened | context/changes/testing-account-isolation-validation/ |
+| 1 | Account isolation & validation hardening | Prove each account only reaches its own data, and that bad input cannot write | #1, #4, #6 | integration (HTTP) | complete | context/changes/testing-account-isolation-validation/ |
 | 2 | Summary & ratio correctness | Prove the filtered summary returns the right subset/totals and the 80% signal is honest | #2, #3, #7 | integration + store-level | not started | — |
 | 3 | Frontend test bootstrap & contract | Bootstrap a frontend runner, pin the API contract the client consumes, cover one critical flow | #5 | contract + flow | not started | — |
 | 4 | Quality-gates wiring | Lock the floor: run Go and frontend suites on PR/CI | floor for all | gates | not started | — |
@@ -136,14 +138,14 @@ the relevant rollout phase ships; before that, the sub-section reads
 ### 6.2 Adding a Go HTTP integration test
 
 - **Pattern**: drive the handler through `net/http/httptest`, assert status → body shape AND side-effects (writes/no-writes), plus the unauthenticated and cross-account cases.
-- **Reference test**: TBD — see §3 Phase 1.
-- **Run locally**: `go test ./...`.
+- **Reference tests**: `cmd/nest-cash/routes_auth_test.go` (DB-free 401 wiring for every protected route), `internal/transactions/isolation_integration_test.go` + `internal/categories/isolation_integration_test.go` (cross-account read/write isolation through the real session chain), `internal/transactions/validation_integration_test.go` + `internal/categories/validation_integration_test.go` (400 + no-write matrix, valid accepted).
+- **Run locally**: `CGO_ENABLED=0 go test ./...` (DB-free tests always run); `CGO_ENABLED=0 DATABASE_URL=<test db> go test ./...` for the DB-backed isolation/validation tests (they skip without `DATABASE_URL`).
 
 ### 6.3 Adding a test for a new API endpoint
 
 - **Test type**: integration (preferred) through the real handler and store.
 - **Pattern**: assert request → response shape AND side-effects. Cover 400 (bad input), 401 (no session), and cross-account rejection — not just the happy path.
-- **Reference test**: TBD — see §3 Phase 1.
+- **Reference tests**: `cmd/nest-cash/routes_auth_test.go` for the 401 wiring guard; `internal/transactions/isolation_integration_test.go` / `internal/transactions/validation_integration_test.go` (and the `internal/categories/` analogs) for ownership and validation coverage.
 - **When to add e2e instead**: only if the failure requires the deployed browser + cookie + handler crossing; not currently planned.
 
 ### 6.4 Adding a frontend test

@@ -253,19 +253,19 @@ None. No schema or data changes.
 
 #### Automated
 
-- [x] 3.1 Invalid cases return 400 + `invalid_request` with zero rows written; valid cases return 201 with one row
-- [x] 3.2 Malformed `page`/`limit` returns 200 with defaults (documented, not a 400)
+- [x] 3.1 Invalid cases return 400 + `invalid_request` with zero rows written; valid cases return 201 with one row — 5c9a568
+- [x] 3.2 Malformed `page`/`limit` returns 200 with defaults (documented, not a 400) — 5c9a568
 
 #### Manual
 
-- [x] 3.3 Deliberate-break: loosening a validation guard fails the matching 400 case (then restore)
+- [x] 3.3 Deliberate-break: loosening a validation guard fails the matching 400 case (then restore) — 5c9a568
 
 ### Phase 4: Test-plan reconciliation (docs)
 
 #### Automated
 
-- [ ] 4.1 `test-plan.md` §6.1–.3 name the shipped reference tests; §3 Phase 1 Status is `complete`; §8 updated
-- [ ] 4.2 §2 Risk #4 wording corrected (semantic filters; `page`/`limit` lenient; `description` truncation)
+- [x] 4.1 `test-plan.md` §6.1–.3 name the shipped reference tests; §3 Phase 1 Status is `complete`; §8 updated
+- [x] 4.2 §2 Risk #4 wording corrected (semantic filters; `page`/`limit` lenient; `description` truncation)
 
 #### Manual
 
