@@ -38,6 +38,7 @@ Domowy budżet ginie w rozproszonych arkuszach i plikach tekstowych bez spójneg
 | S-04 | expense-entry-and-operation-list | użytkownik może wprowadzić wydatek w interfejsie webowym z kwotą, kategorią, datą i opcjonalnym opisem oraz zobaczyć go na paginowanej liście własnych operacji. | S-03 | US-01, FR-005, FR-007 | done |
 | S-05 | filtered-expense-summary | użytkownik może zobaczyć zapisany wydatek w interfejsie webowym, w tabelarycznym podsumowaniu filtrowanym jednocześnie po okresie i kategorii. | S-04 | US-01, FR-009 | done |
 | S-06 | income-and-budget-ratio | użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej. | S-05 | FR-006, Business Logic, NFR (response time) | done |
+| S-07 | transaction-edit-and-delete | użytkownik może edytować i usuwać własne operacje w interfejsie webowym, a zmiany są od razu widoczne na liście operacji i w podsumowaniu. | S-04 | FR-008 | ready |
 
 ## Baseline
 
@@ -145,6 +146,19 @@ Każdy poniższy slice jest planowany jako jeden pionowy przyrost: interfejs web
 - **Risk:** Formularz przychodu, agregacja API i wskaźnik w podsumowaniu mają sens dopiero po działającym przepływie wydatku; wynik musi pozostać pasywnym sygnałem bez dokładania powiadomień poza zakresem.
 - **Status:** done
 
+### S-07: Edycja i usuwanie transakcji
+
+- **Outcome:** użytkownik może edytować i usuwać własne operacje w interfejsie webowym, a zmiany są od razu widoczne na liście operacji i w podsumowaniu.
+- **Change ID:** transaction-edit-and-delete
+- **PRD refs:** FR-008
+- **Prerequisites:** S-04
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Czy zakres obejmuje tylko usuwanie, czy także edycję transakcji? — Owner: user. Block: no.
+- **Risk:** To pierwsza operacja modyfikująca istniejące dane finansowe — musi respektować izolację konta (modyfikacja wyłącznie własnego wpisu) i nie może cicho zmienić historycznych podsumowań. `FR-008` zostaje świadomie przeniesione z „Parked”, więc zakres wykracza poza pierwotny Non-Goal MVP i wymaga reakcji na mvp-check (brakujące Update i Delete).
+- **Status:** ready
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID | Suggested issue title | Ready for `/10x-plan` | Notes |
@@ -156,6 +170,7 @@ Każdy poniższy slice jest planowany jako jeden pionowy przyrost: interfejs web
 | S-04 | expense-entry-and-operation-list | Dodać wprowadzanie wydatków i listę operacji end-to-end | no | Zależne od S-03; obejmuje formularz webowy, API i zapis danych. |
 | S-05 | filtered-expense-summary | Dodać filtrowane podsumowanie wydatków w UI oraz API | no | Zależne od S-04 i decyzji o granulacji okresów. |
 | S-06 | income-and-budget-ratio | Dodać przychody i wskaźnik budżetowy end-to-end | no | Zależne od S-05; obejmuje formularz, agregację i wskaźnik w UI. |
+| S-07 | transaction-edit-and-delete | Dodać edycję i usuwanie transakcji end-to-end | yes | Prerekwizyt S-04 ukończony; domyka brakujące Update i Delete w CRUD. |
 
 Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych zadań typu „frontend” i „backend”, ponieważ ich rozdzielenie opóźniłoby integrację wymaganą przez każdy slice.
 
@@ -168,7 +183,6 @@ Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych z
 ## Parked
 
 - **Edycja lub dezaktywacja kategorii (`FR-004`).** — Odłożone do v2 zgodnie z PRD, aby nie zmieniać historycznych podsumowań.
-- **Edycja lub usuwanie transakcji (`FR-008`).** — Odłożone do v2; nie należy rozszerzać pierwszego przepływu poza zapis i odczyt.
 - **Multi-user i współdzielenie budżetu.** — Poza MVP; obecny model pozostaje single-user.
 - **Wykresy graficzne.** — Poza MVP; tabela wystarcza do pierwszego sprawdzenia przepływu.
 - **Skanowanie paragonów i integracja z bankiem.** — Poza MVP; dane są wprowadzane ręcznie.
