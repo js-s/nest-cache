@@ -230,24 +230,24 @@ None. No schema or data changes.
 
 #### Automated
 
-- [x] 1.1 `CGO_ENABLED=0 go test ./cmd/nest-cash/...` passes with no `DATABASE_URL`; new route-auth test not skipped
-- [x] 1.2 Every protected route returns 401 `{"error":"unauthorized"}` with no `Set-Cookie`
+- [x] 1.1 `CGO_ENABLED=0 go test ./cmd/nest-cash/...` passes with no `DATABASE_URL`; new route-auth test not skipped — b23816f
+- [x] 1.2 Every protected route returns 401 `{"error":"unauthorized"}` with no `Set-Cookie` — b23816f
 
 #### Manual
 
-- [ ] 1.3 Deliberate-break: unwrapped protected route makes the test fail (then restore)
-- [ ] 1.4 Test table enumerates all protected routes from `routes()`
+- [x] 1.3 Deliberate-break: unwrapped protected route makes the test fail (then restore)
+- [x] 1.4 Test table enumerates all protected routes from `routes()`
 
 ### Phase 2: Cross-account isolation through the real session chain (Risk #1, DB)
 
 #### Automated
 
-- [ ] 2.1 `CGO_ENABLED=0 DATABASE_URL=<test db> go test ./internal/transactions/... ./internal/categories/...` passes
-- [ ] 2.2 B observes none of A's rows in list/summary; cross-account writes return 400
+- [x] 2.1 `CGO_ENABLED=0 DATABASE_URL=<test db> go test ./internal/transactions/... ./internal/categories/...` passes
+- [x] 2.2 B observes none of A's rows in list/summary; cross-account writes return 400
 
 #### Manual
 
-- [ ] 2.3 Deliberate-break: removing a `user_id` predicate / ownership gate fails the isolation test (then restore)
+- [x] 2.3 Deliberate-break: removing a `user_id` predicate / ownership gate fails the isolation test (then restore)
 
 ### Phase 3: Validation + no-write (Risk #4, DB)
 
