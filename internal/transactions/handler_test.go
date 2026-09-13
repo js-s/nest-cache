@@ -11,6 +11,9 @@ import (
 	"github.com/user/nest-cash/internal/account"
 )
 
+// uuidZero is a well-formed but never-existing transaction id.
+const uuidZero = "00000000-0000-0000-0000-000000000000"
+
 func authedRequest(t *testing.T, method, target, userID, body string) (*httptest.ResponseRecorder, *http.Request) {
 	t.Helper()
 	var req *http.Request
@@ -251,6 +254,16 @@ func TestHandlerUnauthorizedWithoutAccount(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("Create without account = %d, want 401", rec.Code)
 	}
+	rec = httptest.NewRecorder()
+	h.Update(rec, httptest.NewRequest(http.MethodPut, "/api/transactions/"+uuidZero, strings.NewReader(`{}`)))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("Update without account = %d, want 401", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.Delete(rec, httptest.NewRequest(http.MethodDelete, "/api/transactions/"+uuidZero, nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("Delete without account = %d, want 401", rec.Code)
+	}
 }
 
 func TestHandlerMethodNotAllowed(t *testing.T) {
@@ -266,5 +279,146 @@ func TestHandlerMethodNotAllowed(t *testing.T) {
 	h.Create(rec, httptest.NewRequest(http.MethodGet, "/api/transactions", nil))
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("Create wrong method = %d, want 405", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.Update(rec, httptest.NewRequest(http.MethodGet, "/api/transactions/"+uuidZero, nil))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Update wrong method = %d, want 405", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.Delete(rec, httptest.NewRequest(http.MethodPost, "/api/transactions/"+uuidZero, nil))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Delete wrong method = %d, want 405", rec.Code)
+	}
+}
+
+func TestHandlerUpdate(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, ctx, db)
+	cat := createCategory(t, ctx, db, userID, KindExpense, "Jedzenie")
+	other := createCategory(t, ctx, db, userID, KindExpense, "Transport")
+	h := NewHandler(NewStore(db))
+
+	rec, req := authedRequest(t, http.MethodPost, "/api/transactions", userID,
+		`{"amount":"12.34","category_id":"`+cat+`","occurred_on":"2026-02-03","description":"obiad"}`)
+	h.Create(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("seed Create = %d (%s)", rec.Code, rec.Body.String())
+	}
+	var created transactionDTO
+	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	rec, req = authedRequest(t, http.MethodPut, "/api/transactions/"+created.ID, userID,
+		`{"amount":"55.00","category_id":"`+other+`","occurred_on":"2026-02-10","description":"przejazd"}`)
+	req.SetPathValue("id", created.ID)
+	h.Update(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Update = %d, want 200 (%s)", rec.Code, rec.Body.String())
+	}
+	var updated transactionDTO
+	if err := json.NewDecoder(rec.Body).Decode(&updated); err != nil {
+		t.Fatalf("decode updated: %v", err)
+	}
+	if updated.ID != created.ID || updated.Kind != KindExpense || updated.Amount != "55.00" ||
+		updated.CategoryID != other || updated.CategoryName != "Transport" ||
+		updated.OccurredOn != "2026-02-10" || updated.Description != "przejazd" {
+		t.Fatalf("unexpected DTO: %+v", updated)
+	}
+
+	rec, req = authedRequest(t, http.MethodGet, "/api/transactions", userID, "")
+	h.List(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("List = %d, want 200", rec.Code)
+	}
+	var page listDTO
+	if err := json.NewDecoder(rec.Body).Decode(&page); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	if page.Total != 1 || len(page.Items) != 1 || page.Items[0].Amount != "55.00" || page.Items[0].CategoryName != "Transport" {
+		t.Fatalf("list not updated: %+v", page)
+	}
+}
+
+func TestHandlerUpdateValidation(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	a := createTestUser(t, ctx, db)
+	b := createTestUser(t, ctx, db)
+	expense := createCategory(t, ctx, db, a, KindExpense, "Wydatki")
+	income := createCategory(t, ctx, db, a, KindIncome, "Wpływy")
+	foreign := createCategory(t, ctx, db, b, KindExpense, "Obce")
+	h := NewHandler(NewStore(db))
+
+	seed, ok, err := h.store.Create(ctx, a, expense, KindExpense, "5.00", "2026-02-03", "")
+	if err != nil || !ok {
+		t.Fatalf("seed: %v %v", ok, err)
+	}
+	valid := func(cat, amount, date string) string {
+		return `{"amount":"` + amount + `","category_id":"` + cat + `","occurred_on":"` + date + `"}`
+	}
+
+	for _, tc := range []struct {
+		name string
+		id   string
+		body string
+		want int
+	}{
+		{"bad json", seed.ID, `{"amount":`, http.StatusBadRequest},
+		{"malformed id", "not-a-uuid", valid(expense, "5.00", "2026-02-03"), http.StatusBadRequest},
+		{"empty amount", seed.ID, valid(expense, "", "2026-02-03"), http.StatusBadRequest},
+		{"empty category", seed.ID, valid("", "5.00", "2026-02-03"), http.StatusBadRequest},
+		{"bad date", seed.ID, valid(expense, "5.00", "03-02-2026"), http.StatusBadRequest},
+		{"foreign category", seed.ID, valid(foreign, "5.00", "2026-02-03"), http.StatusBadRequest},
+		{"other kind category", seed.ID, valid(income, "5.00", "2026-02-03"), http.StatusBadRequest},
+		{"unknown id", uuidZero, valid(expense, "5.00", "2026-02-03"), http.StatusNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec, req := authedRequest(t, http.MethodPut, "/api/transactions/"+tc.id, a, tc.body)
+			req.SetPathValue("id", tc.id)
+			h.Update(rec, req)
+			if rec.Code != tc.want {
+				t.Fatalf("code = %d, want %d (%s)", rec.Code, tc.want, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestHandlerDelete(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, ctx, db)
+	cat := createCategory(t, ctx, db, userID, KindExpense, "Wydatki")
+	h := NewHandler(NewStore(db))
+
+	seed, ok, err := h.store.Create(ctx, userID, cat, KindExpense, "5.00", "2026-02-03", "")
+	if err != nil || !ok {
+		t.Fatalf("seed: %v %v", ok, err)
+	}
+
+	rec, req := authedRequest(t, http.MethodDelete, "/api/transactions/"+seed.ID, userID, "")
+	req.SetPathValue("id", seed.ID)
+	h.Delete(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("Delete = %d, want 204 (%s)", rec.Code, rec.Body.String())
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("Delete body = %q, want empty", rec.Body.String())
+	}
+
+	rec, req = authedRequest(t, http.MethodDelete, "/api/transactions/"+seed.ID, userID, "")
+	req.SetPathValue("id", seed.ID)
+	h.Delete(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("repeat Delete = %d, want 404 (%s)", rec.Code, rec.Body.String())
+	}
+
+	rec, req = authedRequest(t, http.MethodDelete, "/api/transactions/not-a-uuid", userID, "")
+	req.SetPathValue("id", "not-a-uuid")
+	h.Delete(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("malformed Delete = %d, want 400 (%s)", rec.Code, rec.Body.String())
 	}
 }

@@ -3,12 +3,17 @@ package transactions
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// ErrNotFound signals that the addressed transaction does not exist for the
+// caller (missing, or owned by another account). Callers map it to 404.
+var ErrNotFound = errors.New("transactions: not found")
 
 // Kinds of transactions.
 const (
@@ -124,6 +129,79 @@ func (s *Store) Create(ctx context.Context, userID, categoryID, kind, amount, oc
 	}
 	t.ParentName = parent.String
 	return t, true, nil
+}
+
+// Update replaces the editable fields of one owned transaction. The row's kind
+// is immutable; the new category must belong to the user and match that kind.
+// ok=false means rejected input (bad id/amount/date/category); ErrNotFound
+// means no such owned row; any other error is a real database failure.
+func (s *Store) Update(ctx context.Context, userID, txID, categoryID, amount, occurredOn, description string) (Transaction, bool, error) {
+	amount = strings.TrimSpace(amount)
+	categoryID = strings.TrimSpace(categoryID)
+	txID = strings.TrimSpace(txID)
+	occurred, err := time.Parse("2006-01-02", strings.TrimSpace(occurredOn))
+	if userID == "" || !uuidRe.MatchString(txID) || !uuidRe.MatchString(categoryID) || !positiveAmount(amount) || err != nil {
+		return Transaction{}, false, nil
+	}
+	description = truncateRunes(strings.TrimSpace(description), MaxDescriptionLen)
+
+	var t Transaction
+	var parent sql.NullString
+	err = s.db.QueryRowContext(ctx,
+		`WITH upd AS (
+		     UPDATE transactions t
+		     SET category_id = c.id, amount = $3::numeric, occurred_on = $4::date, description = $5
+		     FROM categories c
+		     WHERE t.id = $1 AND t.user_id = $2
+		       AND c.id = $6 AND c.user_id = $2 AND c.kind = t.kind
+		     RETURNING t.id, t.kind, t.category_id, t.amount, t.occurred_on, t.description, t.created_at
+		 )
+		 SELECT upd.id, upd.kind, upd.category_id, c.name, p.name, upd.amount::text, upd.occurred_on, upd.description, upd.created_at
+		 FROM upd
+		 JOIN categories c ON c.id = upd.category_id
+		 LEFT JOIN categories p ON p.id = c.parent_id`,
+		txID, userID, amount, occurred, description, categoryID,
+	).Scan(&t.ID, &t.Kind, &t.CategoryID, &t.CategoryName, &parent, &t.Amount, &t.OccurredOn, &t.Description, &t.CreatedAt)
+	if err == sql.ErrNoRows {
+		// ponytail: cheap probe separates 404 (no owned row) from 400 (bad category); not transactional, fine for single-user.
+		var exists int
+		switch probeErr := s.db.QueryRowContext(ctx,
+			`SELECT 1 FROM transactions WHERE id = $1 AND user_id = $2`, txID, userID,
+		).Scan(&exists); probeErr {
+		case nil:
+			return Transaction{}, false, nil
+		case sql.ErrNoRows:
+			return Transaction{}, false, ErrNotFound
+		default:
+			return Transaction{}, false, fmt.Errorf("transactions: update probe: %w", probeErr)
+		}
+	}
+	if err != nil {
+		return Transaction{}, false, fmt.Errorf("transactions: update: %w", err)
+	}
+	t.ParentName = parent.String
+	return t, true, nil
+}
+
+// Delete removes one owned transaction. ok=false means malformed input;
+// ErrNotFound means no such owned row; nil error with true means deleted.
+func (s *Store) Delete(ctx context.Context, userID, txID string) (bool, error) {
+	txID = strings.TrimSpace(txID)
+	if userID == "" || !uuidRe.MatchString(txID) {
+		return false, nil
+	}
+	res, err := s.db.ExecContext(ctx, `DELETE FROM transactions WHERE id = $1 AND user_id = $2`, txID, userID)
+	if err != nil {
+		return false, fmt.Errorf("transactions: delete: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("transactions: delete rows: %w", err)
+	}
+	if n == 0 {
+		return false, ErrNotFound
+	}
+	return true, nil
 }
 
 // List returns one page of the user's operations, newest first, with the total

@@ -1,7 +1,7 @@
 ---
 change_id: transaction-edit-and-delete
 title: Transaction edit and delete
-status: planned
+status: implementing
 created: 2026-09-13
 updated: 2026-09-13
 archived_at: null

@@ -2,6 +2,7 @@ package transactions
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -46,6 +47,15 @@ type createInput struct {
 	OccurredOn  string `json:"occurred_on"`
 	Description string `json:"description,omitempty"`
 	Kind        string `json:"kind,omitempty"`
+}
+
+// updateInput carries the mutable fields only; kind is immutable, so a PUT
+// cannot change a transaction's type.
+type updateInput struct {
+	Amount      string `json:"amount"`
+	CategoryID  string `json:"category_id"`
+	OccurredOn  string `json:"occurred_on"`
+	Description string `json:"description,omitempty"`
 }
 
 type listDTO struct {
@@ -126,6 +136,90 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, toDTO(tx))
+}
+
+// Update replaces the editable fields of an owned transaction. kind is not part
+// of the payload; a foreign or unknown id is a 404.
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		methodNotAllowed(w)
+		return
+	}
+	id, ok := account.AccountIDFromContext(r.Context())
+	if !ok {
+		writeUnauthorized(w)
+		return
+	}
+	txID := r.PathValue("id")
+	if !uuidRe.MatchString(txID) {
+		writeInvalid(w)
+		return
+	}
+	var in updateInput
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeInvalid(w)
+		return
+	}
+	amount := strings.TrimSpace(in.Amount)
+	categoryID := strings.TrimSpace(in.CategoryID)
+	occurredOn := strings.TrimSpace(in.OccurredOn)
+	if amount == "" || categoryID == "" {
+		writeInvalid(w)
+		return
+	}
+	if _, err := time.Parse("2006-01-02", occurredOn); err != nil {
+		writeInvalid(w)
+		return
+	}
+	tx, updated, err := h.store.Update(r.Context(), string(id), txID, categoryID, amount, occurredOn, in.Description)
+	if errors.Is(err, ErrNotFound) {
+		writeNotFound(w)
+		return
+	}
+	if err != nil {
+		writeServerError(w)
+		return
+	}
+	if !updated {
+		writeInvalid(w)
+		return
+	}
+	writeJSON(w, http.StatusOK, toDTO(tx))
+}
+
+// Delete removes an owned transaction and answers 204 with an empty body. A
+// foreign or unknown id is a 404; a malformed one is a 400.
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		methodNotAllowed(w)
+		return
+	}
+	id, ok := account.AccountIDFromContext(r.Context())
+	if !ok {
+		writeUnauthorized(w)
+		return
+	}
+	txID := r.PathValue("id")
+	if !uuidRe.MatchString(txID) {
+		writeInvalid(w)
+		return
+	}
+	deleted, err := h.store.Delete(r.Context(), string(id), txID)
+	if errors.Is(err, ErrNotFound) {
+		writeNotFound(w)
+		return
+	}
+	if err != nil {
+		writeServerError(w)
+		return
+	}
+	if !deleted {
+		writeInvalid(w)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // List returns one page of the logged-in account's operations, newest first.
@@ -256,6 +350,10 @@ func writeUnauthorized(w http.ResponseWriter) {
 
 func writeServerError(w http.ResponseWriter) {
 	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_server_error"})
+}
+
+func writeNotFound(w http.ResponseWriter) {
+	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
 }
 
 func methodNotAllowed(w http.ResponseWriter) {

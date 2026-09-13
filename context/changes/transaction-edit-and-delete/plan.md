@@ -271,11 +271,11 @@ Brak migracji i zmian schematu. Mutacje działają na istniejącej tabeli `trans
 
 #### Automated
 
-- [ ] 1.1 Store Update/Delete tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestUpdate|TestDelete'`
-- [ ] 1.2 Handler tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestHandler'`
-- [ ] 1.3 Isolation test passes: `CGO_ENABLED=0 go test ./internal/transactions/ -run Isolation`
-- [ ] 1.4 Full test suite + build pass: `CGO_ENABLED=0 go test ./... && go build ./...`
-- [ ] 1.5 `gofmt -l internal/transactions cmd/nest-cash` returns empty
+- [x] 1.1 Store Update/Delete tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestUpdate|TestDelete'`
+- [x] 1.2 Handler tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestHandler'`
+- [x] 1.3 Isolation test passes: `CGO_ENABLED=0 go test ./internal/transactions/ -run Isolation`
+- [x] 1.4 Full test suite + build pass: `CGO_ENABLED=0 go test ./... && go build ./...`
+- [x] 1.5 `gofmt -l internal/transactions cmd/nest-cash` returns empty
 
 #### Manual
 

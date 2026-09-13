@@ -54,6 +54,24 @@ func serve(t *testing.T, resolver *auth.Resolver, h http.HandlerFunc, method, ta
 	return rec
 }
 
+// serveTx is serve plus the mux's {id} path value, for the PUT/DELETE routes.
+func serveTx(t *testing.T, resolver *auth.Resolver, h http.HandlerFunc, method, target, id, body string, cookie *http.Cookie) *httptest.ResponseRecorder {
+	t.Helper()
+	var req *http.Request
+	if body == "" {
+		req = httptest.NewRequest(method, target, nil)
+	} else {
+		req = httptest.NewRequest(method, target, strings.NewReader(body))
+	}
+	req.SetPathValue("id", id)
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+	account.RequireAccount(resolver, h).ServeHTTP(rec, req)
+	return rec
+}
+
 func txCount(t *testing.T, ctx context.Context, db *sql.DB, userID string) int {
 	t.Helper()
 	var n int
@@ -133,5 +151,30 @@ func TestTransactionsCrossAccountIsolationThroughSessions(t *testing.T) {
 		"/api/summary?from=2026-09-01&to=2026-09-30&category_id="+aCat, "", bCookie)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("B cross-account summary = %d, want 400 (%s)", rec.Code, rec.Body.String())
+	}
+
+	// B's PUT and DELETE against A's transaction id are 404 and change nothing.
+	rec = serveTx(t, resolver, h.Update, http.MethodPut, "/api/transactions/"+created.ID, created.ID,
+		`{"amount":"1.00","category_id":"`+aCat+`","occurred_on":"2026-09-07"}`, bCookie)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("B cross-account update = %d, want 404 (%s)", rec.Code, rec.Body.String())
+	}
+	rec = serveTx(t, resolver, h.Delete, http.MethodDelete, "/api/transactions/"+created.ID, created.ID, "", bCookie)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("B cross-account delete = %d, want 404 (%s)", rec.Code, rec.Body.String())
+	}
+	if got := txCount(t, ctx, db, aID); got != before {
+		t.Fatalf("A transaction count %d -> %d after rejected B mutations", before, got)
+	}
+	rec = serve(t, resolver, h.List, http.MethodGet, "/api/transactions", "", aCookie)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("A list = %d (%s)", rec.Code, rec.Body.String())
+	}
+	var aPage listDTO
+	if err := json.NewDecoder(rec.Body).Decode(&aPage); err != nil {
+		t.Fatalf("decode A list: %v", err)
+	}
+	if aPage.Total != 1 || len(aPage.Items) != 1 || aPage.Items[0].ID != created.ID || aPage.Items[0].Amount != "12.50" {
+		t.Fatalf("A row changed by B mutations: %+v", aPage)
 	}
 }

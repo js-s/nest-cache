@@ -3,6 +3,7 @@ package transactions
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -314,5 +315,134 @@ func TestListEmpty(t *testing.T) {
 	}
 	if total != 0 || len(items) != 0 {
 		t.Fatalf("empty list = %d/%d, want 0/0", total, len(items))
+	}
+}
+
+func TestUpdateTransaction(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	s := NewStore(db)
+	userID := createTestUser(t, ctx, db)
+	parent := createCategory(t, ctx, db, userID, KindExpense, "Jedzenie")
+	sub := createSubcategory(t, ctx, db, userID, parent, "Zakupy")
+	initial := createCategory(t, ctx, db, userID, KindExpense, "Transport")
+
+	created, ok, err := s.Create(ctx, userID, initial, KindExpense, "12.34", "2026-02-03", "obiad")
+	if err != nil || !ok {
+		t.Fatalf("seed create: %v %v", ok, err)
+	}
+
+	updated, ok, err := s.Update(ctx, userID, created.ID, sub, "55.00", "2026-02-10", "  przejazd  ")
+	if err != nil || !ok {
+		t.Fatalf("Update = %+v, %v, %v", updated, ok, err)
+	}
+	if updated.ID != created.ID || updated.Kind != KindExpense {
+		t.Fatalf("identity changed: %+v", updated)
+	}
+	if updated.Amount != "55.00" || updated.CategoryID != sub || updated.CategoryName != "Zakupy" || updated.ParentName != "Jedzenie" {
+		t.Fatalf("unexpected update: %+v", updated)
+	}
+	if updated.Description != "przejazd" {
+		t.Fatalf("description = %q, want trimmed", updated.Description)
+	}
+	if got := updated.OccurredOn.Format("2006-01-02"); got != "2026-02-10" {
+		t.Fatalf("occurred_on = %q", got)
+	}
+	if !updated.CreatedAt.Equal(created.CreatedAt) {
+		t.Fatalf("created_at changed: %v -> %v", created.CreatedAt, updated.CreatedAt)
+	}
+
+	items, total, err := s.List(ctx, userID, 1, 20, "all")
+	if err != nil || total != 1 || len(items) != 1 {
+		t.Fatalf("List after update: total=%d items=%d err=%v", total, len(items), err)
+	}
+	if items[0].Amount != "55.00" || items[0].CategoryName != "Zakupy" || items[0].Description != "przejazd" {
+		t.Fatalf("list not updated: %+v", items[0])
+	}
+}
+
+func TestUpdateRejectsInvalidInput(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	s := NewStore(db)
+	a := createTestUser(t, ctx, db)
+	b := createTestUser(t, ctx, db)
+	expense := createCategory(t, ctx, db, a, KindExpense, "Wydatki")
+	income := createCategory(t, ctx, db, a, KindIncome, "Wpływy")
+	foreign := createCategory(t, ctx, db, b, KindExpense, "Obce")
+
+	seed, ok, err := s.Create(ctx, a, expense, KindExpense, "5.00", "2026-02-03", "")
+	if err != nil || !ok {
+		t.Fatalf("seed: %v %v", ok, err)
+	}
+
+	for _, tc := range []struct {
+		name, txID, cat, amount, date string
+	}{
+		{"malformed txID", "not-a-uuid", expense, "5.00", "2026-02-03"},
+		{"malformed category", seed.ID, "not-a-uuid", "5.00", "2026-02-03"},
+		{"empty category", seed.ID, "", "5.00", "2026-02-03"},
+		{"zero amount", seed.ID, expense, "0.00", "2026-02-03"},
+		{"not a number", seed.ID, expense, "abc", "2026-02-03"},
+		{"bad date", seed.ID, expense, "5.00", "03-02-2026"},
+		{"foreign category", seed.ID, foreign, "5.00", "2026-02-03"},
+		{"other kind category", seed.ID, income, "5.00", "2026-02-03"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tx, ok, err := s.Update(ctx, a, tc.txID, tc.cat, tc.amount, tc.date, "x"); err != nil || ok {
+				t.Fatalf("expected ok=false nil error; got %+v, %v, %v", tx, ok, err)
+			}
+		})
+	}
+
+	// A well-formed but unknown id, and a foreign row, are not found.
+	unknown := "00000000-0000-0000-0000-000000000000"
+	if _, ok, err := s.Update(ctx, a, unknown, expense, "5.00", "2026-02-03", ""); !errors.Is(err, ErrNotFound) || ok {
+		t.Fatalf("unknown id = ok=%v err=%v, want ErrNotFound", ok, err)
+	}
+	if _, ok, err := s.Update(ctx, b, seed.ID, foreign, "5.00", "2026-02-03", ""); !errors.Is(err, ErrNotFound) || ok {
+		t.Fatalf("cross-account id = ok=%v err=%v, want ErrNotFound", ok, err)
+	}
+
+	// The rejected updates left the row intact.
+	items, total, err := s.List(ctx, a, 1, 20, "all")
+	if err != nil || total != 1 || items[0].Amount != "5.00" || items[0].CategoryID != expense {
+		t.Fatalf("row changed after rejects: total=%d items=%+v err=%v", total, items, err)
+	}
+}
+
+func TestDeleteTransaction(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	s := NewStore(db)
+	a := createTestUser(t, ctx, db)
+	b := createTestUser(t, ctx, db)
+	cat := createCategory(t, ctx, db, a, KindExpense, "Wydatki")
+
+	seed, ok, err := s.Create(ctx, a, cat, KindExpense, "5.00", "2026-02-03", "")
+	if err != nil || !ok {
+		t.Fatalf("seed: %v %v", ok, err)
+	}
+	other, ok, err := s.Create(ctx, a, cat, KindExpense, "6.00", "2026-02-04", "")
+	if err != nil || !ok {
+		t.Fatalf("seed other: %v %v", ok, err)
+	}
+
+	if deleted, err := s.Delete(ctx, a, seed.ID); err != nil || !deleted {
+		t.Fatalf("Delete = %v, %v", deleted, err)
+	}
+	if _, err := s.Delete(ctx, a, seed.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("repeat delete err = %v, want ErrNotFound", err)
+	}
+	if deleted, err := s.Delete(ctx, a, "not-a-uuid"); err != nil || deleted {
+		t.Fatalf("malformed delete = %v, %v, want false,nil", deleted, err)
+	}
+	if _, err := s.Delete(ctx, b, other.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cross-account delete err = %v, want ErrNotFound", err)
+	}
+
+	items, total, err := s.List(ctx, a, 1, 20, "all")
+	if err != nil || total != 1 || len(items) != 1 || items[0].ID != other.ID {
+		t.Fatalf("A rows after deletes: total=%d items=%+v err=%v", total, items, err)
 	}
 }
