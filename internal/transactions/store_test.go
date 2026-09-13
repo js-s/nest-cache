@@ -318,7 +318,7 @@ func TestListEmpty(t *testing.T) {
 	}
 }
 
-func TestUpdateTransaction(t *testing.T) {
+func TestTransactionsUpdate(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	s := NewStore(db)
@@ -361,7 +361,7 @@ func TestUpdateTransaction(t *testing.T) {
 	}
 }
 
-func TestUpdateRejectsInvalidInput(t *testing.T) {
+func TestTransactionsUpdateRejectsInvalidInput(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	s := NewStore(db)
@@ -411,7 +411,7 @@ func TestUpdateRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func TestDeleteTransaction(t *testing.T) {
+func TestTransactionsDelete(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	s := NewStore(db)

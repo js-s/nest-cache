@@ -41,8 +41,9 @@ const description = ref('')
 
 const editingId = ref<string | null>(null)
 const confirmingId = ref<string | null>(null)
-const rowBusy = ref<string | null>(null)
+const busyRows = ref(new Set<string>())
 const editError = ref('')
+const deleteError = ref('')
 const edit = ref({ amount: '', category_id: '', occurred_on: '', description: '' })
 
 const kindGroups = computed(() => groups.value.filter((g) => g.kind === kind.value))
@@ -215,7 +216,11 @@ async function saveEdit(): Promise<void> {
     editError.value = 'Enter a positive amount, e.g. 12.34.'
     return
   }
-  rowBusy.value = id
+  if (!edit.value.occurred_on) {
+    editError.value = 'Select a date.'
+    return
+  }
+  busyRows.value.add(id)
   try {
     await updateTransaction(id, {
       amount: value,
@@ -228,25 +233,27 @@ async function saveEdit(): Promise<void> {
   } catch (e) {
     await handle(e, editError)
   } finally {
-    rowBusy.value = null
+    busyRows.value.delete(id)
   }
 }
 
 function askDelete(id: string): void {
   if (editingId.value === id) cancelEdit()
+  deleteError.value = ''
   confirmingId.value = id
 }
 
 async function remove(id: string): Promise<void> {
-  rowBusy.value = id
+  deleteError.value = ''
+  busyRows.value.add(id)
   try {
     await deleteTransaction(id)
     confirmingId.value = null
     await loadFirstPage()
   } catch (e) {
-    await handle(e, listError)
+    await handle(e, deleteError)
   } finally {
-    rowBusy.value = null
+    busyRows.value.delete(id)
   }
 }
 </script>
@@ -328,12 +335,12 @@ async function remove(id: string): Promise<void> {
           <tbody>
             <tr v-for="t in items" :key="t.id">
               <td>
-                <input v-if="editingId === t.id" v-model="edit.occurred_on" type="date" :disabled="rowBusy === t.id" />
+                <input v-if="editingId === t.id" v-model="edit.occurred_on" type="date" :disabled="busyRows.has(t.id)" />
                 <template v-else>{{ t.occurred_on }}</template>
               </td>
               <td>{{ t.kind }}</td>
               <td>
-                <select v-if="editingId === t.id" v-model="edit.category_id" :disabled="rowBusy === t.id">
+                <select v-if="editingId === t.id" v-model="edit.category_id" :disabled="busyRows.has(t.id)">
                   <option value="" disabled>Select a category…</option>
                   <optgroup v-for="g in groupsFor(t.kind)" :key="g.id" :label="g.name">
                     <template v-if="g.children.length">
@@ -350,7 +357,7 @@ async function remove(id: string): Promise<void> {
                   v-model="edit.description"
                   type="text"
                   maxlength="500"
-                  :disabled="rowBusy === t.id"
+                  :disabled="busyRows.has(t.id)"
                 />
                 <template v-else>{{ t.description }}</template>
               </td>
@@ -361,24 +368,25 @@ async function remove(id: string): Promise<void> {
                   type="text"
                   inputmode="decimal"
                   autocomplete="off"
-                  :disabled="rowBusy === t.id"
+                  :disabled="busyRows.has(t.id)"
                 />
                 <template v-else>{{ t.amount }}</template>
               </td>
               <td class="actions">
                 <template v-if="editingId === t.id">
-                  <button type="button" class="btn btn-primary" :disabled="rowBusy === t.id" @click="saveEdit">Save</button>
-                  <button type="button" class="btn btn-secondary" :disabled="rowBusy === t.id" @click="cancelEdit">Cancel</button>
+                  <button type="button" class="btn btn-primary" :disabled="busyRows.has(t.id)" @click="saveEdit">Save</button>
+                  <button type="button" class="btn btn-secondary" :disabled="busyRows.has(t.id)" @click="cancelEdit">Cancel</button>
                   <span v-if="editError" class="alert alert-error" role="alert">{{ editError }}</span>
                 </template>
                 <template v-else-if="confirmingId === t.id">
                   <span>Delete?</span>
-                  <button type="button" class="btn btn-primary" :disabled="rowBusy === t.id" @click="remove(t.id)">Yes</button>
-                  <button type="button" class="btn btn-secondary" :disabled="rowBusy === t.id" @click="confirmingId = null">No</button>
+                  <button type="button" class="btn btn-primary" :disabled="busyRows.has(t.id)" @click="remove(t.id)">Yes</button>
+                  <button type="button" class="btn btn-secondary" :disabled="busyRows.has(t.id)" @click="confirmingId = null; deleteError = ''">No</button>
+                  <span v-if="deleteError" class="alert alert-error" role="alert">{{ deleteError }}</span>
                 </template>
                 <template v-else>
-                  <button type="button" class="btn btn-secondary" :disabled="rowBusy === t.id" @click="startEdit(t)">Edit</button>
-                  <button type="button" class="btn btn-secondary" :disabled="rowBusy === t.id" @click="askDelete(t.id)">Delete</button>
+                  <button type="button" class="btn btn-secondary" :disabled="busyRows.has(t.id)" @click="startEdit(t)">Edit</button>
+                  <button type="button" class="btn btn-secondary" :disabled="busyRows.has(t.id)" @click="askDelete(t.id)">Delete</button>
                 </template>
               </td>
             </tr>

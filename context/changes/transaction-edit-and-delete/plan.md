@@ -206,6 +206,7 @@ export function deleteTransaction(id: string): Promise<void> {
 - W komórce akcji: gdy `editingId === t.id` → Save/Cancel; gdy `confirmingId === t.id` → tekst „Delete?” + Yes/No; inaczej Edit/Delete. Dodać nagłówek kolumny `Actions`.
 - W trybie edycji komórki Category (select z `groupsFor(t.kind)` w układzie optgroup/children jak w formularzu dodawania) / Amount / Date / Description zamieniają się w inputy; Type i Date pozostają widoczne.
 - `rowBusy` (na `id`) blokuje przyciski w trakcie żądania. Zachować istniejące wzorce `handle`/`message` i redirect na 401.
+- `web/src/style.css` (addendum z review 2026-09-13): `--content-width` 720px→960px + `.table-wrap { overflow-x: auto; }` pod nową kolumnę Actions; style scoped `.actions` w `Operations.vue`.
 
 ### Success Criteria:
 

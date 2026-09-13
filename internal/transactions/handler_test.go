@@ -292,7 +292,7 @@ func TestHandlerMethodNotAllowed(t *testing.T) {
 	}
 }
 
-func TestHandlerUpdate(t *testing.T) {
+func TestTransactionsHandlerUpdate(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	userID := createTestUser(t, ctx, db)
@@ -342,7 +342,7 @@ func TestHandlerUpdate(t *testing.T) {
 	}
 }
 
-func TestHandlerUpdateValidation(t *testing.T) {
+func TestTransactionsHandlerUpdateValidation(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	a := createTestUser(t, ctx, db)
@@ -386,7 +386,7 @@ func TestHandlerUpdateValidation(t *testing.T) {
 	}
 }
 
-func TestHandlerDelete(t *testing.T) {
+func TestTransactionsHandlerDelete(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	userID := createTestUser(t, ctx, db)

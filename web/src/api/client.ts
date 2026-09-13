@@ -125,14 +125,14 @@ export function updateTransaction(
   id: string,
   input: { amount: string; category_id: string; occurred_on: string; description?: string },
 ): Promise<Transaction> {
-  return request<Transaction>(`/transactions/${id}`, {
+  return request<Transaction>(`/transactions/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(input),
   })
 }
 
 export function deleteTransaction(id: string): Promise<void> {
-  return request<void>(`/transactions/${id}`, { method: 'DELETE' })
+  return request<void>(`/transactions/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export interface SummaryRow {
