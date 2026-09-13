@@ -287,14 +287,14 @@ Brak migracji i zmian schematu. Mutacje działają na istniejącej tabeli `trans
 
 #### Automated
 
-- [x] 2.1 Type-check and build pass: `npm --prefix web run build`
+- [x] 2.1 Type-check and build pass: `npm --prefix web run build` — c5d9b6d
 
 #### Manual
 
-- [ ] 2.2 Inline edit saves changes in place
-- [ ] 2.3 Cancel and delete-No make no changes
-- [ ] 2.4 Delete-Yes removes the row
-- [ ] 2.5 No kind-change control in edit mode
-- [ ] 2.6 Summary reflects edits and deletes
-- [ ] 2.7 Validation error shows message and does not save
-- [ ] 2.8 Verified in two browsers
+- [x] 2.2 Inline edit saves changes in place — c5d9b6d
+- [x] 2.3 Cancel and delete-No make no changes — c5d9b6d
+- [x] 2.4 Delete-Yes removes the row — c5d9b6d
+- [x] 2.5 No kind-change control in edit mode — c5d9b6d
+- [x] 2.6 Summary reflects edits and deletes — c5d9b6d
+- [x] 2.7 Validation error shows message and does not save — c5d9b6d
+- [x] 2.8 Verified in two browsers — c5d9b6d
