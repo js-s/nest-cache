@@ -235,30 +235,30 @@ None. No schema or data changes.
 
 #### Manual
 
-- [x] 1.3 Deliberate-break: unwrapped protected route makes the test fail (then restore)
-- [x] 1.4 Test table enumerates all protected routes from `routes()`
+- [x] 1.3 Deliberate-break: unwrapped protected route makes the test fail (then restore) — e48606b
+- [x] 1.4 Test table enumerates all protected routes from `routes()` — e48606b
 
 ### Phase 2: Cross-account isolation through the real session chain (Risk #1, DB)
 
 #### Automated
 
-- [x] 2.1 `CGO_ENABLED=0 DATABASE_URL=<test db> go test ./internal/transactions/... ./internal/categories/...` passes
-- [x] 2.2 B observes none of A's rows in list/summary; cross-account writes return 400
+- [x] 2.1 `CGO_ENABLED=0 DATABASE_URL=<test db> go test ./internal/transactions/... ./internal/categories/...` passes — e48606b
+- [x] 2.2 B observes none of A's rows in list/summary; cross-account writes return 400 — e48606b
 
 #### Manual
 
-- [x] 2.3 Deliberate-break: removing a `user_id` predicate / ownership gate fails the isolation test (then restore)
+- [x] 2.3 Deliberate-break: removing a `user_id` predicate / ownership gate fails the isolation test (then restore) — e48606b
 
 ### Phase 3: Validation + no-write (Risk #4, DB)
 
 #### Automated
 
-- [ ] 3.1 Invalid cases return 400 + `invalid_request` with zero rows written; valid cases return 201 with one row
-- [ ] 3.2 Malformed `page`/`limit` returns 200 with defaults (documented, not a 400)
+- [x] 3.1 Invalid cases return 400 + `invalid_request` with zero rows written; valid cases return 201 with one row
+- [x] 3.2 Malformed `page`/`limit` returns 200 with defaults (documented, not a 400)
 
 #### Manual
 
-- [ ] 3.3 Deliberate-break: loosening a validation guard fails the matching 400 case (then restore)
+- [x] 3.3 Deliberate-break: loosening a validation guard fails the matching 400 case (then restore)
 
 ### Phase 4: Test-plan reconciliation (docs)
 
