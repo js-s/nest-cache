@@ -1,10 +1,10 @@
 ---
 change_id: transaction-edit-and-delete
 title: Transaction edit and delete
-status: impl_reviewed
+status: archived
 created: 2026-09-13
 updated: 2026-09-13
-archived_at: null
+archived_at: 2026-09-13T19:35:31Z
 ---
 
 ## Notes
