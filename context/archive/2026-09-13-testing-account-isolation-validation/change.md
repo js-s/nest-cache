@@ -1,10 +1,10 @@
 ---
 change_id: testing-account-isolation-validation
 title: Account isolation and validation hardening tests
-status: impl_reviewed
+status: archived
 created: 2026-09-13
 updated: 2026-09-13
-archived_at: null
+archived_at: 2026-09-13T16:40:28Z
 ---
 
 ## Notes
