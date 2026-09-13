@@ -121,6 +121,20 @@ export function listTransactions(
   return request<TransactionPage>(`/transactions?${params.toString()}`)
 }
 
+export function updateTransaction(
+  id: string,
+  input: { amount: string; category_id: string; occurred_on: string; description?: string },
+): Promise<Transaction> {
+  return request<Transaction>(`/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteTransaction(id: string): Promise<void> {
+  return request<void>(`/transactions/${id}`, { method: 'DELETE' })
+}
+
 export interface SummaryRow {
   category_id: string
   category_name: string

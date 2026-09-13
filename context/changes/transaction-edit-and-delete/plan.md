@@ -271,23 +271,23 @@ Brak migracji i zmian schematu. Mutacje działają na istniejącej tabeli `trans
 
 #### Automated
 
-- [x] 1.1 Store Update/Delete tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestUpdate|TestDelete'`
-- [x] 1.2 Handler tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestHandler'`
-- [x] 1.3 Isolation test passes: `CGO_ENABLED=0 go test ./internal/transactions/ -run Isolation`
-- [x] 1.4 Full test suite + build pass: `CGO_ENABLED=0 go test ./... && go build ./...`
-- [x] 1.5 `gofmt -l internal/transactions cmd/nest-cash` returns empty
+- [x] 1.1 Store Update/Delete tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestUpdate|TestDelete'` — 38873a4
+- [x] 1.2 Handler tests pass: `CGO_ENABLED=0 go test ./internal/transactions/ -run 'TestHandler'` — 38873a4
+- [x] 1.3 Isolation test passes: `CGO_ENABLED=0 go test ./internal/transactions/ -run Isolation` — 38873a4
+- [x] 1.4 Full test suite + build pass: `CGO_ENABLED=0 go test ./... && go build ./...` — 38873a4
+- [x] 1.5 `gofmt -l internal/transactions cmd/nest-cash` returns empty — 38873a4
 
 #### Manual
 
-- [ ] 1.6 `curl` PUT own id → 200; foreign/unknown → 404; foreign category → 400
-- [ ] 1.7 `curl` DELETE own id → 204 empty; repeat → 404
-- [ ] 1.8 `GET /api/transactions` and `GET /api/summary` reflect mutations
+- [x] 1.6 `curl` PUT own id → 200; foreign/unknown → 404; foreign category → 400 — 38873a4
+- [x] 1.7 `curl` DELETE own id → 204 empty; repeat → 404 — 38873a4
+- [x] 1.8 `GET /api/transactions` and `GET /api/summary` reflect mutations — 38873a4
 
 ### Phase 2: Frontend — inline edit i delete w Operations
 
 #### Automated
 
-- [ ] 2.1 Type-check and build pass: `npm --prefix web run build`
+- [x] 2.1 Type-check and build pass: `npm --prefix web run build`
 
 #### Manual
 
