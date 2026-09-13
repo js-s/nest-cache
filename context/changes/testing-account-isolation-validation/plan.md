@@ -264,9 +264,9 @@ None. No schema or data changes.
 
 #### Automated
 
-- [x] 4.1 `test-plan.md` §6.1–.3 name the shipped reference tests; §3 Phase 1 Status is `complete`; §8 updated
-- [x] 4.2 §2 Risk #4 wording corrected (semantic filters; `page`/`limit` lenient; `description` truncation)
+- [x] 4.1 `test-plan.md` §6.1–.3 name the shipped reference tests; §3 Phase 1 Status is `complete`; §8 updated — 49a5cbd
+- [x] 4.2 §2 Risk #4 wording corrected (semantic filters; `page`/`limit` lenient; `description` truncation) — 49a5cbd
 
 #### Manual
 
-- [ ] 4.3 Read-through: §6 matches shipped tests and §2 #4 matches handler behavior
+- [x] 4.3 Read-through: §6 matches shipped tests and §2 #4 matches handler behavior — 49a5cbd
