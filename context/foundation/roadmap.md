@@ -36,7 +36,7 @@ Domowy budżet ginie w rozproszonych arkuszach i plikach tekstowych bez spójneg
 | S-02 | web-ui-styling | użytkownik widzi spójny, schludny interfejs webowy: uporządkowany panel logowania i rejestracji, większe pola formularzy i logiczny układ ekranów. | — | FR-001, FR-002, NFR (cross-browser) | done |
 | S-03 | predefined-and-custom-categories | użytkownik może zobaczyć w interfejsie webowym predefiniowane kategorie i podkategorie przy pierwszym użyciu i utworzyć własne kategorie oraz podkategorie wydatków lub przychodów. | S-01 | FR-003 | done |
 | S-04 | expense-entry-and-operation-list | użytkownik może wprowadzić wydatek w interfejsie webowym z kwotą, kategorią, datą i opcjonalnym opisem oraz zobaczyć go na paginowanej liście własnych operacji. | S-03 | US-01, FR-005, FR-007 | done |
-| S-05 | filtered-expense-summary | użytkownik może zobaczyć zapisany wydatek w interfejsie webowym, w tabelarycznym podsumowaniu filtrowanym jednocześnie po okresie i kategorii. | S-04 | US-01, FR-009 | blocked |
+| S-05 | filtered-expense-summary | użytkownik może zobaczyć zapisany wydatek w interfejsie webowym, w tabelarycznym podsumowaniu filtrowanym jednocześnie po okresie i kategorii. | S-04 | US-01, FR-009 | done |
 | S-06 | income-and-budget-ratio | użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej. | S-05 | FR-006, Business Logic, NFR (response time) | done |
 
 ## Baseline
@@ -131,7 +131,7 @@ Każdy poniższy slice jest planowany jako jeden pionowy przyrost: interfejs web
 - **Unknowns:**
   - Jakie opcje granulacji okresu mają być dostępne w filtrze: dzień, tydzień, miesiąc, rok czy zakres niestandardowy? — Owner: user. Block: yes.
 - **Risk:** Ten slice jest gwiazdą przewodnią roadmapy i musi połączyć ekran podsumowania z działającym kontraktem API; niejasna granulacja może wymusić zmianę filtrów po obu stronach.
-- **Status:** blocked
+- **Status:** done
 
 ### S-06: Przychód i wskaźnik budżetowy
 
@@ -183,3 +183,4 @@ Ten handoff zachowuje jeden backlog pionowych rezultatów. Nie tworzy osobnych z
 - **S-03: użytkownik może zobaczyć w interfejsie webowym predefiniowane kategorie i podkategorie przy pierwszym użyciu oraz utworzyć własne kategorie i podkategorie wydatków lub przychodów (np. grupa „Codzienne” z podkategoriami „Artykuły spożywcze” i „Chemia gospodarcza”).** — Archived 2026-09-12 → `context/archive/2026-09-12-predefined-and-custom-categories/`. Lesson: —.
 - **S-04: użytkownik może wprowadzić wydatek w interfejsie webowym z kwotą, kategorią, datą i opcjonalnym opisem oraz zobaczyć go na paginowanej liście własnych operacji.** — Archived 2026-09-12 → `context/archive/2026-09-12-expense-entry-and-operation-list/`. Lesson: —.
 - **S-06: użytkownik może wprowadzić przychód w interfejsie webowym, a podsumowanie pokazuje pasywny wskaźnik relacji wydatków do przychodów i sygnalizuje próg 80% lub więcej.** — Archived 2026-09-12 → `context/archive/2026-09-12-income-and-budget-ratio/`. Lesson: —.
+- **S-05: użytkownik może zobaczyć zapisany wydatek w interfejsie webowym, w tabelarycznym podsumowaniu filtrowanym jednocześnie po okresie i kategorii.** — Archived 2026-09-13 → `context/archive/2026-09-12-filtered-expense-summary/`. Lesson: —.
