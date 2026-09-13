@@ -9,9 +9,9 @@ import (
 
 // Invalid input is rejected with 400 + invalid_request and writes nothing;
 // a valid group is accepted. countRows proves the no-write side.
-func TestValidationRejectsNothingWritten(t *testing.T) {
+func TestCategoriesValidationRejectsNothingWritten(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
+	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
 	a := createTestUser(t, ctx, db)
 	b := createTestUser(t, ctx, db)

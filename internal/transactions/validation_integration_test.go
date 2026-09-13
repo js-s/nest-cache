@@ -10,7 +10,7 @@ import (
 
 // Invalid input is rejected with 400 + invalid_request and writes nothing;
 // valid input is accepted. txCount (isolation file) proves the no-write side.
-func TestValidationRejectsNothingWritten(t *testing.T) {
+func TestTransactionsValidationRejectsNothingWritten(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	a := createTestUser(t, ctx, db)

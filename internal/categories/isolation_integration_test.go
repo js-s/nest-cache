@@ -55,9 +55,9 @@ func serve(t *testing.T, resolver *auth.Resolver, h http.HandlerFunc, method, ta
 
 // B must not read A's categories and must not write under A's parent id.
 // Every step goes through the real session → resolver → handler chain.
-func TestCrossAccountIsolationThroughSessions(t *testing.T) {
+func TestCategoriesCrossAccountIsolationThroughSessions(t *testing.T) {
 	db := openTestDB(t)
-	defer db.Close()
+	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
 	store := NewStore(db)
 	resolver := auth.NewResolver(auth.NewStore(db))

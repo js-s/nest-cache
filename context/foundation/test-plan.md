@@ -133,7 +133,6 @@ the relevant rollout phase ships; before that, the sub-section reads
 - **Naming**: `<file>_test.go`, `TestXxx` functions.
 - **Reference test**: `internal/transactions/summary_test.go`.
 - **Run locally**: `go test ./...` (on macOS, prefix `CGO_ENABLED=0` if the `dyld` quirk appears).
-- **Command**: wrap DB-boundary errors as `fmt.Errorf("<pkg>: <op>: %w", err)` (see `context/foundation/lessons.md`).
 
 ### 6.2 Adding a Go HTTP integration test
 

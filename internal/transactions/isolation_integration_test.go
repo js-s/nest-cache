@@ -65,7 +65,7 @@ func txCount(t *testing.T, ctx context.Context, db *sql.DB, userID string) int {
 
 // B must not read A's rows and must not write through A's resource ids.
 // Every step goes through the real session → resolver → handler chain.
-func TestCrossAccountIsolationThroughSessions(t *testing.T) {
+func TestTransactionsCrossAccountIsolationThroughSessions(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 	resolver := auth.NewResolver(auth.NewStore(db))
